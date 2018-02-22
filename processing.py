@@ -170,7 +170,9 @@ class User:
     def build_all(self):
         # create all higher-order features for this user, and its Exercises and
         # Instances. This function can be modified to build more features!
-        pass
+        for i, e in enumerate(self.exercises):
+            info = {'exercise_num': i}
+            e.set_exercise_features(info)
 
 
 class Exercise:
@@ -216,9 +218,12 @@ class Exercise:
         for i in self.instances:
             i.propagate_labels(labels)
 
+    def set_exercise_features(self, info_from_user):
+        self.features['exercise_num'] = info_from_user['exercise_num']
+        self.features['exercise_length'] = len(self.instances)
+
 
 class Instance:
-
     """
     This class processes and stores all information relating to a single
     Duolingo instance (i.e., word)
