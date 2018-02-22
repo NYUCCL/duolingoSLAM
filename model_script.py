@@ -1,5 +1,4 @@
-from starter_code.baseline import load_data
-from starter_code.eval import load_labels
+from processing import build_data
 import pandas as pd
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -7,36 +6,33 @@ from sklearn.metrics import roc_auc_score
 import lightgbm as lgb
 
 
-# load data using starter code
-train_data, train_labels = load_data('data/data_en_es/en_es.slam.20171218.train')
-dev_data, dev_labels = (load_data('data/data_en_es/en_es.slam.20171218.dev'),
-                        load_labels('data/data_en_es/en_es.slam.20171218.dev.key'))
+# load data
+data = build_data('data/data_en_es/en_es.slam.20171218.train',
+                  'data/data_en_es/en_es.slam.20171218.dev',
+                  'data/data_en_es/en_es.slam.20171218.dev.key', n_users=None)
+train_x, train_ds, train_y, dev_x, dev_ids, dev_y = data
 
-# put data in scipy sparse matrix, put labels in list
+# put data in scipy sparse matrix
 dv = DictVectorizer()
-train_data_dicts = [i.to_features() for i in train_data]
-train_data_dicts = dv.fit_transform(train_data_dicts)
-train_labels_list = [train_labels[i.instance_id] for i in train_data]
-dev_data_dicts = [i.to_features() for i in dev_data]
-dev_data_dicts = dv.transform(dev_data_dicts)
-dev_labels_list = [dev_labels[i.instance_id] for i in dev_data]
+train_x_sparse = dv.fit_transform(train_x)
+dev_x_sparse = dv.transform(dev_x)
 
 # train linear model
 model = LogisticRegression(C=.1)
-model.fit(train_data_dicts, train_labels_list)
-dev_predicted = model.predict_proba(dev_data_dicts)[:, 1]
+model.fit(train_x_sparse, train_y)
+dev_predicted = model.predict_proba(dev_x_sparse)[:, 1]
 dev_predictions_df = pd.DataFrame({
-    'instance': [i.instance_id for i in dev_data],
+    'instance': dev_ids,
     'prediction': dev_predicted
 })
 # print auc score
-print(roc_auc_score(dev_labels_list, dev_predicted))
+print(roc_auc_score(dev_y, dev_predicted))
 dev_predictions_df.to_csv('sklearn_logreg.pred',
                           header=False, index=False, sep=" ")
 
 # train light gradient boosting machine model
-d_train = lgb.Dataset(train_data_dicts, label=train_labels_list)
-d_valid = lgb.Dataset(dev_data_dicts, label=dev_labels_list)
+d_train = lgb.Dataset(train_x_sparse, label=train_y)
+d_valid = lgb.Dataset(dev_x_sparse, label=dev_y)
 params = {
     'application': 'binary',
     'metric': 'auc',
@@ -47,11 +43,11 @@ params = {
 bst = lgb.train(params, d_train, valid_sets=[d_train, d_valid],
                 valid_names=['train', 'valid'],
                 num_boost_round=1000, verbose_eval=10)
-dev_predicted = bst.predict(dev_data_dicts)
+dev_predicted = bst.predict(dev_x_sparse)
 # print auc score
-print(roc_auc_score(dev_labels_list, dev_predicted))
+print(roc_auc_score(dev_y, dev_predicted))
 dev_predictions_df = pd.DataFrame({
-    'instance': [i.instance_id for i in dev_data],
+    'instance': dev_ids,
     'prediction': dev_predicted
 })
 dev_predictions_df.to_csv('lightgbm.pred', header=False, index=False, sep=" ")
