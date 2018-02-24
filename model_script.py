@@ -7,9 +7,9 @@ import lightgbm as lgb
 
 
 # load data
-data = build_data('data/data_en_es/en_es.slam.20171218.train',
-                  'data/data_en_es/en_es.slam.20171218.dev',
-                  'data/data_en_es/en_es.slam.20171218.dev.key', n_users=None)
+data = build_data('data/data_es_en/es_en.slam.20171218.train.new',
+                  'data/data_es_en/es_en.slam.20171218.dev.new',
+                  'data/data_es_en/es_en.slam.20171218.dev.key', n_users=None)
 train_x, train_ds, train_y, dev_x, dev_ids, dev_y = data
 
 # put data in scipy sparse matrix
