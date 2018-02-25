@@ -170,9 +170,19 @@ class User:
     def build_all(self):
         # create all higher-order features for this user, and its Exercises and
         # Instances. This function can be modified to build more features!
+
+        # calculate some simple exercise-level features
         for i, e in enumerate(self.exercises):
             info = {'exercise_num': i}
             e.set_exercise_features(info)
+
+        # tally performance history for each word
+        self.tally_performance()
+
+    def tally_performance(self):
+        word_stats = dict()
+        for e in self.exercises:
+            e.tally_performance(word_stats)
 
 
 class Exercise:
@@ -222,6 +232,19 @@ class Exercise:
         self.features['exercise_num'] = info_from_user['exercise_num']
         self.features['exercise_length'] = len(self.instances)
 
+    def tally_performance(self, word_stats):
+        to_add = dict()
+        for i in self.instances:
+            i.tally_performance(word_stats, to_add)
+        for key, value in to_add.items():
+            if key in word_stats:
+                word_stats[key]['hit'] += value['hit']
+                word_stats[key]['miss'] += value['miss']
+                word_stats[key]['last_test'] = self.days
+            else:
+                word_stats[key] = value
+                word_stats[key]['last_test'] = self.days
+
 
 class Instance:
     """
@@ -231,13 +254,14 @@ class Instance:
     def __init__(self, text, exercise, user):
         # initialized using the line of text, the creating Exercise, and the
         # creating User
+        self.label = None
         self.features = dict()
         self.exercise = exercise
         self.user = user
         user.add_instance(self)
         line = text.split()
         self.id = line[0]
-        self.token = line[1]
+        self.token = line[1].lower()
         self.part_of_speech = line[2]
         self.morphological_features = dict()
         for l in line[3].split('|'):
@@ -250,7 +274,7 @@ class Instance:
         if len(line) == 7:
             self.label = float(line[6])
         # add initial features to feature dictionary
-        self.features['token'] = self.token.lower()
+        self.features['token'] = self.token
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
         for morphological_feature in self.morphological_features:
             self.features['morphological_feature:' + morphological_feature] = 1.0
@@ -262,3 +286,20 @@ class Instance:
     def propagate_labels(self, labels):
         if self.id in labels:
             self.label = labels[self.id]
+
+    def tally_performance(self, word_stats, to_add):
+        if self.token in word_stats:
+            ws = word_stats[self.token]
+            self.features['hit'] = ws['hit']
+            self.features['miss'] = ws['miss']
+            self.features['prop_hit'] = (ws['hit'] + .5)/(ws['hit']+ws['miss'] + 1)
+            self.features['time_since_last_test'] = (self.exercise.days -
+                                                     ws['last_test'])
+        if self.label is not None and not self.exercise.test:
+            if self.token not in to_add:
+                to_add[self.token] = {'hit': 0.0, 'miss': 0.0}
+            ta = to_add[self.token]
+            if self.label:
+                ta['hit'] += 1.0
+            else:
+                ta['miss'] += 1.0
