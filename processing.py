@@ -24,15 +24,17 @@ each instance.
 """
 
 from collections import OrderedDict
+import numpy as np
 
 
-def build_data(train_datafile, test_datafile, test_labelsfile=None,
+def build_data(language, train_datafile, test_datafile, test_labelsfile=None,
                n_users=None, featurized=True):
     """
     This function loads and returns data and labels from a training and
     testfile, which are assumed to contain the same users. If a test
 
     Parameters:
+        language: 2-letter code for the language being learned.
         train_datafile: the file name of the training data file.
         test_datafile: the file name of the test data file.
         test_labelsfile (optional): the file name of the labels for the test
@@ -52,6 +54,7 @@ def build_data(train_datafile, test_datafile, test_labelsfile=None,
         test_ids: see above.
         test_y: see above.
     """
+
     users = OrderedDict()
     print('loading data files')
     _load_file(train_datafile, users, False, n_users)
@@ -131,7 +134,7 @@ class User:
         self.id = id
         self.exercises = []
         self.instances = []
-        self.features['user:' + self.id] = 1.0
+        self.features['user'] = self.id
 
     def add_exercise(self, textlist, test):
         # add new Exercise object to process chunk of input lines
@@ -230,20 +233,35 @@ class Exercise:
 
     def set_exercise_features(self, info_from_user):
         self.features['exercise_num'] = info_from_user['exercise_num']
+        self.features['log_exercise_num'] = np.log1p(info_from_user['exercise_num'])
         self.features['exercise_length'] = len(self.instances)
+        self.features['log_exercise_length'] = np.log1p(len(self.instances))
 
     def tally_performance(self, word_stats):
+        avg_rates = [1., .3, .1, .03, .01, .003]
         to_add = dict()
         for i in self.instances:
             i.tally_performance(word_stats, to_add)
         for key, value in to_add.items():
-            if key in word_stats:
-                word_stats[key]['hit'] += value['hit']
-                word_stats[key]['miss'] += value['miss']
-                word_stats[key]['last_test'] = self.days
+            if key not in word_stats:
+                ws = {
+                    'erravg': [0] * 6,
+                    'last_test': self.days,
+                    'encounters': value['encounters']
+                }
+                word_stats[key] = ws
             else:
-                word_stats[key] = value
-                word_stats[key]['last_test'] = self.days
+                ws = word_stats[key]
+                ws['last_test'] = self.days
+                ws['encounters'] += value['encounters']
+            for a in range(6):
+                lr = avg_rates[a]
+                if self.test:
+                    lr = lr/10
+                errnew = value['outcome'] / value['encounters']
+                hitnew = 1 - errnew
+                for _ in range(value['encounters']):
+                    ws['erravg'][a] = ws['erravg'][a] + lr * (errnew - ws['erravg'][a])
 
 
 class Instance:
@@ -262,19 +280,22 @@ class Instance:
         line = text.split()
         self.id = line[0]
         self.token = line[1].lower()
-        self.part_of_speech = line[2]
+        self.root_token = line[2].lower()
+        self.part_of_speech = line[3]
         self.morphological_features = dict()
-        for l in line[3].split('|'):
+        for l in line[4].split('|'):
             [key, value] = l.split('=')
             if key == 'Person':
                 value = int(value)
             self.morphological_features[key] = value
-        self.dependency_label = line[4]
-        self.dependency_edge_head = int(line[5])
-        if len(line) == 7:
-            self.label = float(line[6])
+        self.dependency_label = line[5]
+        self.dependency_edge_head = int(line[6])
+        if len(line) == 8:
+            self.label = float(line[7])
         # add initial features to feature dictionary
         self.features['token'] = self.token
+        if self.root_token != self.token:
+            self.features['root_token'] = self.root_token
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
         for morphological_feature in self.morphological_features:
             self.features['morphological_feature:' + morphological_feature] = 1.0
@@ -288,18 +309,29 @@ class Instance:
             self.label = labels[self.id]
 
     def tally_performance(self, word_stats, to_add):
-        if self.token in word_stats:
-            ws = word_stats[self.token]
-            self.features['hit'] = ws['hit']
-            self.features['miss'] = ws['miss']
-            self.features['prop_hit'] = (ws['hit'] + .5)/(ws['hit']+ws['miss'] + 1)
-            self.features['time_since_last_test'] = (self.exercise.days -
-                                                     ws['last_test'])
-        if self.label is not None and not self.exercise.test:
-            if self.token not in to_add:
-                to_add[self.token] = {'hit': 0.0, 'miss': 0.0}
-            ta = to_add[self.token]
-            if self.label:
-                ta['hit'] += 1.0
+        if self.root_token != self.token:
+            keys = [('token:' + self.token, 'token'), ('root:' +  self.root_token, 'root')]
+        else:
+            keys = [('token:' + self.token, 'token')]
+        for key in keys:
+            if key[0] in word_stats:
+                ws = word_stats[key[0]]
+                for a in range(6):
+                    self.features[key[1] + ':erravg'+str(a)] = ws['erravg'][a]
+                self.features[key[1] + ':log_time_since_last_test'] = np.log1p(self.exercise.days -
+                                                         ws['last_test'])
+                self.features[key[1] + ':time_since_last_test'] = np.log1p(self.exercise.days -
+                                                         ws['last_test'])
+                self.features[key[1] + ':log_encounters'] = np.log1p(ws['encounters'])
+                self.features[key[1] + ':encounters'] = (ws['encounters'])
             else:
-                ta['miss'] += 1.0
+                self.features[key[1] + ':first_encounter'] = 1.0
+            if key[0] not in to_add:
+                to_add[key[0]] = {'outcome': 0.0, 'encounters': 0}
+            ta = to_add[key[0]]
+            ta['encounters'] += 1
+            if self.label is not None and not self.exercise.test:
+                if self.label:
+                    ta['outcome'] += self.label
+            else:
+                ta['outcome'] += 0.0
