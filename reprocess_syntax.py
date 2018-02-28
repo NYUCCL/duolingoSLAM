@@ -18,12 +18,16 @@ python reprocess_syntax.py --original data/data_en_es/en_es.slam.20171218.dev
 
 import requests
 import argparse
+import spacy
 
 
 def main():
 
     parser = argparse.ArgumentParser(
         description='Reprocess Duolingo data using Syntaxnet')
+
+    parser.add_argument('--lang', help='2-letter code of language being learned',
+                        required=True)
     parser.add_argument('--url', help='URL for syntaxnet API',
                         required=True)
     parser.add_argument('--original', help='Original data file name',
@@ -34,6 +38,18 @@ def main():
     if not args.new:
         args.new = args.original + '.new'
 
+    if args.lang == 'en':
+        nlp = spacy.load('en')
+        lookup = None
+    elif args.lang == 'es':
+        from spacy.lang.es.lemmatizer import LOOKUP
+        lookup = LOOKUP
+        nlp = None
+    elif args.lang == 'fr':
+        from spacy.lang.fr.lemmatizer import LOOKUP
+        lookup = LOOKUP
+        nlp = None
+
     new_lines = []
     ex_lines = []
     exercise = 0
@@ -43,7 +59,8 @@ def main():
             if line[0] == '#':
                 new_lines.append(line)
             elif len(line.strip()) == 0:
-                ex_lines = reprocess_lines(ex_lines, args.url, cache_dict)
+                ex_lines = reprocess_lines(ex_lines, args.url, args.lang,
+                                           cache_dict, nlp=nlp, lookup=lookup)
                 new_lines.extend(ex_lines)
                 new_lines.append(line)
                 exercise += 1
@@ -58,13 +75,47 @@ def main():
         f.writelines(new_lines)
 
 
-def reprocess_lines(ex_lines, url, cache_dict):
+def reprocess_lines(ex_lines, url, lang, cache_dict, nlp=None, lookup=None):
     old_lines = [l.strip().split() for l in ex_lines]
     syntaxnet_input = [l[1] for l in old_lines]
     cache_key = " ".join(syntaxnet_input)
     if cache_key in cache_dict:
         cached_lines = cache_dict[cache_key]
     else:
+        if lang == 'en':
+            spacy_string = syntaxnet_input[0]
+            for i in range(1, len(syntaxnet_input)):
+                added_string = ' '
+                if len(syntaxnet_input[i-1]) > 1 and syntaxnet_input[i-1][-1] == "'":
+                    added_string = ''
+                if syntaxnet_input[i-1][-1] == "-":
+                    added_string = ''
+                if syntaxnet_input[i][0] in ["'", "-"]:
+                    added_string = ''
+                spacy_string = spacy_string + added_string + syntaxnet_input[i]
+
+            spacy_out = nlp(spacy_string)
+            spacy_out_list = []
+            offset = 0
+            try:
+                for i in range(len(syntaxnet_input)):
+                    j = i + offset
+                    sp = spacy_out[j].lemma_ if spacy_out[j].lemma_ != '-PRON-' else str(spacy_out[j])
+                    spacy_out_list.append(sp)
+                    if syntaxnet_input[i] != 'vs.' and syntaxnet_input[i][-1] in ["?", '.']:
+                        offset += 1
+                    if syntaxnet_input[i] == 'cannot':
+                        offset += 1
+                assert len(syntaxnet_input) == len(spacy_out_list)
+            except:
+                print(syntaxnet_input)
+                print(spacy_out)
+                if len(syntaxnet_input) > len(spacy_out_list):
+                    for i in range(len(spacy_out_list), len(syntaxnet_input)):
+                        spacy_out_list.append(syntaxnet_input[i])
+        # else:
+        #     spacy_out_list = []
+
         num_punct = 0
         punct_locs = []
         for i, l in enumerate(old_lines):
@@ -91,8 +142,23 @@ def reprocess_lines(ex_lines, url, cache_dict):
             old_line = old_lines[i]
             new_dict = output_dicts[i]
             line = []
-            line.append(old_line[1])
-            line.append(new_dict['fpos'].split('+')[0])
+            word = old_line[1]
+            line.append(word)
+            pos = new_dict['fpos'].split('+')[0]
+            if lang == 'en':
+                line.append(spacy_out_list[i])
+            else:
+                try:
+                    root = lookup[word.lower()]
+                    if pos not in ['VERB', 'AUX'] and word[-1] != 'r' and root[-1] == 'r':
+                        if word[-1] == 's':
+                            root = word[:-1]
+                        else:
+                            root = word
+                except:
+                    root = word
+                line.append(root)
+            line.append(pos)
             morph_features_list = []
             skip_keys = ['break_level', 'category', 'dep',
                          'head', 'label', 'pos_tag', 'word']
@@ -104,7 +170,7 @@ def reprocess_lines(ex_lines, url, cache_dict):
             line.append(new_dict['head'])
             for j in range(len(line)-1):
                 line[j] = str(line[j]) + "  "
-            line = "{:<14}{:<8}{:<72}{:<13}{}".format(*line)
+            line = "{:<14}{:<14}{:<8}{:<72}{:<13}{}".format(*line)
             cached_lines.append(line)
         cache_dict[cache_key] = cached_lines
     new_lines = []
