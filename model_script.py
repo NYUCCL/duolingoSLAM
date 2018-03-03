@@ -3,7 +3,6 @@ import pandas as pd
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
-# import lightgbm as lgb
 import numpy as np
 from scipy import sparse
 
@@ -63,31 +62,11 @@ dev_predicted_indiv = np.zeros(dev_predicted.shape)
 for user in np.unique(train_users):
     trainmask = (train_users == user)
     devmask = (dev_users == user)
-    usermodel = LogisticRegression(C=.1)
-    usermodel.fit(train_x_withdf[trainmask, :], train_y[trainmask])
-    dev_predicted_indiv[devmask] = usermodel.predict_proba(dev_x_withdf[devmask, :])[:, 1]
+    if sum(devmask) > 0:
+        usermodel = LogisticRegression(C=.1)
+        usermodel.fit(train_x_withdf[trainmask, :], train_y[trainmask])
+        dev_predicted_indiv[devmask] = usermodel.predict_proba(dev_x_withdf[devmask, :])[:, 1]
 
 print('per-user auc:', roc_auc_score(dev_y, dev_predicted_indiv))
 
 
-# # train light gradient boosting machine model
-# d_train = lgb.Dataset(train_x_sparse, label=train_y)
-# d_valid = lgb.Dataset(dev_x_sparse, label=dev_y)
-# params = {
-#     'application': 'binary',
-#     'metric': 'auc',
-#     'learning_rate': .1,
-#     'num_leaves': 128,
-#     'min_data_in_leaf': 20,
-# }
-# bst = lgb.train(params, d_train, valid_sets=[d_train, d_valid],
-#                 valid_names=['train', 'valid'],
-#                 num_boost_round=1000, verbose_eval=10)
-# dev_predicted = bst.predict(dev_x_sparse)
-# # print auc score
-# print(roc_auc_score(dev_y, dev_predicted))
-# dev_predictions_df = pd.DataFrame({
-#     'instance': dev_ids,
-#     'prediction': dev_predicted
-# })
-# dev_predictions_df.to_csv('lightgbm.pred', header=False, index=False, sep=" ")
