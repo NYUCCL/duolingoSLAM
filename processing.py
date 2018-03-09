@@ -217,10 +217,15 @@ class Exercise:
                 else:
                     assert '.' not in value
                     value = int(value)
-                    if value < 0:
+                    if value < 1:
                         value = None
             setattr(self, key, value)
         self.features['format:' + self.format] = 1.0
+        self.features['session:' + self.session] = 1.0
+        self.features['client:' + self.client] = 1.0
+        if self.time is not None:
+            self.features['log_time'] = self.time
+            self.features['time'] = np.log1p(self.time)
 
     def to_features(self):
         instance_features = [{**self.features, **i.to_features()}
@@ -310,19 +315,22 @@ class Instance:
 
     def tally_performance(self, word_stats, to_add):
         if self.root_token != self.token:
-            keys = [('token:' + self.token, 'token'), ('root:' +  self.root_token, 'root')]
+            keys = [('token:' + self.token, 'token'),
+                    ('root:' + self.root_token, 'root')]
         else:
             keys = [('token:' + self.token, 'token')]
         for key in keys:
             if key[0] in word_stats:
                 ws = word_stats[key[0]]
+                logenc = np.log1p(ws['encounters'])
                 for a in range(6):
                     self.features[key[1] + ':erravg'+str(a)] = ws['erravg'][a]
+                    self.features[key[1] + ':erravg'+str(a) + '_x_logenc'] = logenc * ws['erravg'][a]
                 self.features[key[1] + ':log_time_since_last_test'] = np.log1p(self.exercise.days -
                                                          ws['last_test'])
                 self.features[key[1] + ':time_since_last_test'] = np.log1p(self.exercise.days -
                                                          ws['last_test'])
-                self.features[key[1] + ':log_encounters'] = np.log1p(ws['encounters'])
+                self.features[key[1] + ':log_encounters'] = logenc
                 self.features[key[1] + ':encounters'] = (ws['encounters'])
             else:
                 self.features[key[1] + ':first_encounter'] = 1.0
