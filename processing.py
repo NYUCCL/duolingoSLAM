@@ -242,14 +242,14 @@ class Exercise:
         self.features['log_exercise_length'] = np.log1p(len(self.instances))
 
     def tally_performance(self, word_stats):
-        avg_rates = [1., .3, .1, .03, .01, .003]
+        avg_rates = [.3, .1, .03, .01]
         to_add = dict()
         for i in self.instances:
             i.tally_performance(word_stats, to_add)
         for key, value in to_add.items():
             if key not in word_stats:
                 ws = {
-                    'erravg': [0] * 6,
+                    'erravg': [0] * 4,
                     'last_test': self.days,
                     'encounters': value['encounters']
                 }
@@ -258,10 +258,11 @@ class Exercise:
                 ws = word_stats[key]
                 ws['last_test'] = self.days
                 ws['encounters'] += value['encounters']
-            for a in range(6):
+            for a in range(4):
                 lr = avg_rates[a]
+                # freeze updates during test
                 if self.test:
-                    lr = lr/10
+                    lr = 0
                 errnew = value['outcome'] / value['encounters']
                 hitnew = 1 - errnew
                 for _ in range(value['encounters']):
@@ -322,7 +323,7 @@ class Instance:
             if key[0] in word_stats:
                 ws = word_stats[key[0]]
                 logenc = np.log1p(ws['encounters'])
-                for a in range(6):
+                for a in range(4):
                     self.features[key[1] + ':erravg'+str(a)] = ws['erravg'][a]
                     self.features[key[1] + ':erravg'+str(a) + '_x_logenc'] = logenc * ws['erravg'][a]
                 self.features[key[1] + ':log_time_since_last_test'] = np.log1p(self.exercise.days -
