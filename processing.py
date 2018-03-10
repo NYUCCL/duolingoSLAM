@@ -27,7 +27,7 @@ from collections import OrderedDict
 import numpy as np
 
 
-def build_data(language, train_datafile, test_datafile, test_labelsfile=None,
+def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
                n_users=None, featurized=True):
     """
     This function loads and returns data and labels from a training and
@@ -57,27 +57,14 @@ def build_data(language, train_datafile, test_datafile, test_labelsfile=None,
 
     users = OrderedDict()
     print('loading data files')
-    _load_file(train_datafile, users, False, n_users)
-    _load_file(test_datafile, users, True, n_users)
-    print('building features')
-    for u in users.values():
-        u.build_all()
-    print('retrieving features')
-    if featurized:
-        train_x = [f for u in users.values() for f in u.to_features(False)]
-        test_x = [f for u in users.values() for f in u.to_features(True)]
-    else:
-        # return list of user objects as train_x - can be useful for
-        # development/testing
-        train_x = list(users.values())
-        test_x = None
+    for tf in train_datafiles:
+        _load_file(tf, users, False, n_users)
+    for tf in test_datafiles:
+        _load_file(tf, users, True, n_users)
     print('retrieving labels')
-    train_ids = [l for u in users.values() for l in u.get_ids(False)]
-    train_y = [l for u in users.values() for l in u.get_labels(False)]
-    test_ids = [l for u in users.values() for l in u.get_ids(True)]
-    if test_labelsfile:
+    for label_file in labelfiles:
         labels = dict()
-        with open(test_labelsfile, 'rt') as f:
+        with open(label_file, 'rt') as f:
             for line in f:
                 line = line.strip()
                 if len(line) == 0:
@@ -89,10 +76,22 @@ def build_data(language, train_datafile, test_datafile, test_labelsfile=None,
                 labels[instance_id] = label
         for u in users.values():
             u.propagate_labels(labels)
-
-        test_y = [l for u in users.values() for l in u.get_labels(True)]
+    print('building features')
+    for u in users.values():
+        u.build_all()
+    print('retrieving features')
+    train_ids = [l for u in users.values() for l in u.get_ids(False)]
+    train_y = [l for u in users.values() for l in u.get_labels(False)]
+    test_ids = [l for u in users.values() for l in u.get_ids(True)]
+    test_y = [l for u in users.values() for l in u.get_labels(True)]
+    if featurized:
+        train_x = [f for u in users.values() for f in u.to_features(False)]
+        test_x = [f for u in users.values() for f in u.to_features(True)]
     else:
-        test_y = None
+        # return list of user objects as train_x - can be useful for
+        # development/testing
+        train_x = list(users.values())
+        test_x = None
     return train_x, train_ids, train_y, test_x, test_ids, test_y
 
 
@@ -224,8 +223,8 @@ class Exercise:
         self.features['session:' + self.session] = 1.0
         self.features['client:' + self.client] = 1.0
         if self.time is not None:
-            self.features['log_time'] = self.time
-            self.features['time'] = np.log1p(self.time)
+            self.features['time'] = self.time
+            self.features['log_time'] = np.log1p(self.time)
 
     def to_features(self):
         instance_features = [{**self.features, **i.to_features()}
@@ -328,7 +327,7 @@ class Instance:
                     self.features[key[1] + ':erravg'+str(a) + '_x_logenc'] = logenc * ws['erravg'][a]
                 self.features[key[1] + ':log_time_since_last_test'] = np.log1p(self.exercise.days -
                                                          ws['last_test'])
-                self.features[key[1] + ':time_since_last_test'] = np.log1p(self.exercise.days -
+                self.features[key[1] + ':time_since_last_test'] = (self.exercise.days -
                                                          ws['last_test'])
                 self.features[key[1] + ':log_encounters'] = logenc
                 self.features[key[1] + ':encounters'] = (ws['encounters'])

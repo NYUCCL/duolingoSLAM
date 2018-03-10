@@ -8,9 +8,10 @@ from scipy import sparse
 
 
 # load data
-data = build_data('en', 'data/data_en_es/en_es.slam.20171218.train.new',
-                  'data/data_en_es/en_es.slam.20171218.dev.new',
-                  'data/data_en_es/en_es.slam.20171218.dev.key', n_users=300)
+data = build_data('en', ['data/data_en_es/en_es.slam.20171218.train.new'],
+                  ['data/data_en_es/en_es.slam.20171218.dev.new'],
+                  labelfiles=['data/data_en_es/en_es.slam.20171218.dev.key'],
+                  n_users=300)
 train_x, train_ids, train_y, dev_x, dev_ids, dev_y = data
 
 # store user id's separately
