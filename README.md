@@ -15,9 +15,13 @@ boosting solution really works much better than the linear model right now. For
 fastest training, use the `fr_en` data set since it's smallest, or adjust
 `n_users` when calling `build_data`.
 
-Unfortunately installing lightgbm isn't completely trivial: [Instructions are here.](http://lightgbm.readthedocs.io/en/latest/Installation-Guide.html#macos)
+Unfortunately installing lightgbm isn't completely trivial: [Instructions are here.](http://lightgbm.readthedocs.io/en/latest/Installation-Guide.html#macos**
 If there aren't any install errors then it isn't so bad. You'll need homebrew, which is here https://brew.sh/
 If there are errors I'll try to help if I can!
+
+**EDIT**: It looks like you might be able to install via pip without installing
+from source. Try `pip install lightgbm`, or `pip install wheel` then `pip
+install lightgbm`.
 
 Hopefully if you can't install it then the linear model, found at `model_script.py`,
 will also give you a general idea if added features are helping or not.
