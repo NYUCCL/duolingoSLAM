@@ -24,7 +24,7 @@ params = {
         'learning_rate': .1,
         'num_leaves': 128,
         'min_data_in_leaf': 20,
-        'num_boost_round': 900
+        'num_boost_round': 1000
     },
     'es_en': {
         'application': 'binary',
@@ -32,18 +32,49 @@ params = {
         'learning_rate': .1,
         'num_leaves': 128,
         'min_data_in_leaf': 20,
-        'num_boost_round': 800
+        'num_boost_round': 900
     },
+    'all': {
+        'application': 'binary',
+        'metric': 'auc',
+        'learning_rate': .1,
+        'num_leaves': 256,
+        'min_data_in_leaf': 20,
+        'num_boost_round': 1400
+    }
 }
 
 
 # load data
-data = build_data('en',
-                  ['data/data_{0}/{0}.slam.20171218.train.new'.format(lang),
-                   'data/data_{0}/{0}.slam.20171218.dev.new'.format(lang)],
-                  ['data/data_{0}/test.{0}.new'.format(lang)],
-                  labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
-                  n_users=None)
+if lang == 'all':
+    data = build_data(
+        'all',
+        [
+            'data/data_{0}/{0}.slam.20171218.train.new'.format('en_es'),
+            'data/data_{0}/{0}.slam.20171218.dev.new'.format('en_es'),
+            'data/data_{0}/{0}.slam.20171218.train.new'.format('fr_en'),
+            'data/data_{0}/{0}.slam.20171218.dev.new'.format('fr_en'),
+            'data/data_{0}/{0}.slam.20171218.train.new'.format('es_en')
+            'data/data_{0}/{0}.slam.20171218.dev.new'.format('es_en')
+        ],
+        [
+            'data/data_{0}/test.{0}.new'.format('en_es'),
+            'data/data_{0}/test.{0}.new'.format('fr_en'),
+            'data/data_{0}/test.{0}.new'.format('es_en')
+        ],
+        labelfiles=[
+            'data/data_{0}/{0}.slam.20171218.dev.key'.format('en_es'),
+            'data/data_{0}/{0}.slam.20171218.dev.key'.format('fr_en'),
+            'data/data_{0}/{0}.slam.20171218.dev.key'.format('es_en')
+        ],
+        n_users=None)
+else:
+    data = build_data(lang[:2],
+                      ['data/data_{0}/{0}.slam.20171218.train.new'.format(lang),
+                       'data/data_{0}/{0}.slam.20171218.dev.new'.format(lang)],
+                      ['data/data_{0}/test.{0}.new'.format(lang)],
+                      labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
+    n_users=None)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
 # put data in scipy sparse matrix
@@ -64,7 +95,7 @@ bst = lgb.train(params[lang], d_train, valid_sets=[d_train],
 
 if not os.path.exists('models'):
     os.makedirs('models')
-bst.save_model('models/dev.{}.bst'.format(lang))
+bst.save_model('models/test.{}.bst'.format(lang))
 test_predicted = bst.predict(test_x_sparse)
 test_predicted = bst.predict(test_x_sparse)
 test_predictions_df = pd.DataFrame({

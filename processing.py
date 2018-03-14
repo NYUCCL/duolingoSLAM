@@ -97,6 +97,7 @@ def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
 
 # helper function for load_data; handles loading of a single data file
 def _load_file(datafile, users, test, n_users):
+    lang = datafile.split('_')[0][-2:]
     with open(datafile, 'r') as f:
         usernum = 0
         exercise_lines = []
@@ -111,12 +112,15 @@ def _load_file(datafile, users, test, n_users):
                 elif usernum == n_users and line_user not in users:
                     break
                 elif line_user not in users:
-                    users[line_user] = User(line_user)
+                    users[line_user] = User(line_user, lang)
                     usernum += 1
                 users[line_user].add_exercise(exercise_lines, test)
                 exercise_lines = []
             elif line[0] == "#":
-                line_user = line[7:15]
+                # add language to end of user for combined training in case
+                # some users are in multiple languages (don't know if this
+                # actually occurs)
+                line_user = line[7:15] + lang
                 exercise_lines.append(line)
             else:
                 exercise_lines.append(line)
@@ -127,17 +131,19 @@ class User:
     This class stores all information relating to a single duolingo user,
     including all exercises and instances (i.e., words) completed.
     """
-    def __init__(self, id):
+    def __init__(self, id, lang):
         # attribute to store features for later analysis
         self.features = dict()
         self.id = id
+        self.lang = lang
         self.exercises = []
         self.instances = []
         self.features['user'] = self.id
+        self.features['lang'] = self.lang
 
     def add_exercise(self, textlist, test):
         # add new Exercise object to process chunk of input lines
-        self.exercises.append(Exercise(textlist, self, test))
+        self.exercises.append(Exercise(textlist, self, test, self.lang))
 
     def add_instance(self, instance):
         # link instance to current User object
@@ -192,7 +198,7 @@ class Exercise:
     This class processes and stores all information relating to a single
     Duolingo exercise
     """
-    def __init__(self, textlist, user, test):
+    def __init__(self, textlist, user, test, lang):
         # initialize with a list of lines, of which the first should contain
         # exercise information and the rest should contain instance
         # information, along with the creating User and whether this exercise
@@ -202,7 +208,7 @@ class Exercise:
         self.test = test
         self.instances = []
         for t in textlist[1:]:
-            self.instances.append(Instance(t, self, user))
+            self.instances.append(Instance(t, self, user, lang))
         line = textlist[0][2:].split()
         for parameter in line:
             [key, value] = parameter.split(':')
@@ -274,18 +280,19 @@ class Instance:
     This class processes and stores all information relating to a single
     Duolingo instance (i.e., word)
     """
-    def __init__(self, text, exercise, user):
+    def __init__(self, text, exercise, user, lang):
         # initialized using the line of text, the creating Exercise, and the
         # creating User
         self.label = None
+        self.lang = lang
         self.features = dict()
         self.exercise = exercise
         self.user = user
         user.add_instance(self)
         line = text.split()
         self.id = line[0]
-        self.token = line[1].lower()
-        self.root_token = line[2].lower()
+        self.token = line[1].lower() + '_' + lang
+        self.root_token = line[2].lower() + '_' + lang
         self.part_of_speech = line[3]
         self.morphological_features = dict()
         for l in line[4].split('|'):
