@@ -97,7 +97,7 @@ def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
 
 # helper function for load_data; handles loading of a single data file
 def _load_file(datafile, users, test, n_users):
-    lang = datafile.split('_')[0][-2:]
+    lang = datafile.split('/')[-1].split('_')[0][-2:]
     with open(datafile, 'r') as f:
         usernum = 0
         exercise_lines = []
@@ -186,6 +186,8 @@ class User:
 
         # tally performance history for each word
         self.tally_performance()
+        for e in self.exercises:
+            e.set_others_pos()
 
     def tally_performance(self):
         word_stats = dict()
@@ -204,7 +206,7 @@ class Exercise:
         # information, along with the creating User and whether this exercise
         # is in the test set.
         self.features = dict()
-        self.user = user
+        self.user_obj = user
         self.test = test
         self.instances = []
         for t in textlist[1:]:
@@ -231,6 +233,23 @@ class Exercise:
         if self.time is not None:
             self.features['time'] = self.time
             self.features['log_time'] = np.log1p(self.time)
+
+    def set_others_pos(self):
+        for idx, instance in enumerate(self.instances):
+            if idx == 0:
+                prev_inst = None
+            else:
+                prev_inst = self.instances[idx-1]
+            if idx == len(self.instances)-1:
+                next_inst = None
+            else:
+                next_inst = self.instances[idx+1]
+            root_idx = instance.dependency_edge_head - 1
+            if root_idx < 0 or root_idx >= len(self.instances):
+                root_inst = None
+            else:
+                root_inst = self.instances[root_idx]
+            instance.set_others_pos(prev_inst, next_inst, root_inst)
 
     def to_features(self):
         instance_features = [{**self.features, **i.to_features()}
@@ -297,8 +316,6 @@ class Instance:
         self.morphological_features = dict()
         for l in line[4].split('|'):
             [key, value] = l.split('=')
-            if key == 'Person':
-                value = int(value)
             self.morphological_features[key] = value
         self.dependency_label = line[5]
         self.dependency_edge_head = int(line[6])
@@ -306,11 +323,12 @@ class Instance:
             self.label = float(line[7])
         # add initial features to feature dictionary
         self.features['token'] = self.token
+        self.features['word_length'] = len(self.token)
         if self.root_token != self.token:
             self.features['root_token'] = self.root_token
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
-        for morphological_feature in self.morphological_features:
-            self.features['morphological_feature:' + morphological_feature] = 1.0
+        for key, value in self.morphological_features.items():
+            self.features['morphological_feature:' + key + '_' + value] = 1.0
         self.features['dependency_label:' + self.dependency_label] = 1.0
 
     def to_features(self):
@@ -350,3 +368,23 @@ class Instance:
                     ta['outcome'] += self.label
             else:
                 ta['outcome'] += 0.0
+
+    def set_others_pos(self, prev_inst, next_inst, root_inst):
+        if prev_inst is None:
+            self.features['prev_pos:None'] = 1.0
+        else:
+            self.features['prev_pos:'+prev_inst.part_of_speech] = 1.0
+            # self.features['prev_enc'] = prev_inst.features['token:encounters']
+        if next_inst is None:
+            self.features['next_pos:None'] = 1.0
+        else:
+            self.features['next_pos:'+next_inst.part_of_speech] = 1.0
+            # self.features['next_enc'] = next_inst.features['token:encounters']
+        if root_inst is None:
+            self.features['root_pos:None'] = 1.0
+        else:
+            self.features['root_pos:'+root_inst.part_of_speech] = 1.0
+            # self.features['root_enc'] = root_inst.features['token:encounters']
+
+        # self.features['next_pos:'+next_pos] = 1.0
+        # self.features['root_pos:'+root_pos] = 1.0
