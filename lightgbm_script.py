@@ -6,7 +6,7 @@ import lightgbm as lgb
 
 
 # use this to change language pair trained on
-lang = 'es_en'
+lang = 'all'
 # lightgbm parameters for each model. Different ones might be better for
 # different language pairs
 params = {
@@ -54,7 +54,7 @@ if lang == 'all':
             'data/data_{0}/{0}.slam.20171218.dev.new'.format('en_es'),
             'data/data_{0}/{0}.slam.20171218.train.new'.format('fr_en'),
             'data/data_{0}/{0}.slam.20171218.dev.new'.format('fr_en'),
-            'data/data_{0}/{0}.slam.20171218.train.new'.format('es_en')
+            'data/data_{0}/{0}.slam.20171218.train.new'.format('es_en'),
             'data/data_{0}/{0}.slam.20171218.dev.new'.format('es_en')
         ],
         [

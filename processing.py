@@ -25,6 +25,7 @@ each instance.
 
 from collections import OrderedDict
 import numpy as np
+import copy
 
 
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
@@ -179,6 +180,9 @@ class User:
         # create all higher-order features for this user, and its Exercises and
         # Instances. This function can be modified to build more features!
 
+        self.n_train = sum([not e.test for e in self.exercises])
+        self.n_test = sum([e.test for e in self.exercises])
+
         # calculate some simple exercise-level features
         for i, e in enumerate(self.exercises):
             info = {'exercise_num': i}
@@ -191,8 +195,9 @@ class User:
 
     def tally_performance(self):
         word_stats = dict()
-        for e in self.exercises:
-            e.tally_performance(word_stats)
+        tot = len(self.exercises)
+        for idx, e in enumerate(self.exercises):
+            e.tally_performance(word_stats, idx, tot)
 
 
 class Exercise:
@@ -266,30 +271,34 @@ class Exercise:
         self.features['exercise_length'] = len(self.instances)
         self.features['log_exercise_length'] = np.log1p(len(self.instances))
 
-    def tally_performance(self, word_stats):
+    def tally_performance(self, word_stats, idx, total):
         avg_rates = [.3, .1, .03, .01]
         to_add = dict()
         for i in self.instances:
-            i.tally_performance(word_stats, to_add)
+            i.tally_performance(word_stats, to_add, idx, total)
         for key, value in to_add.items():
             if key not in word_stats:
                 ws = {
                     'erravg': [0] * 4,
-                    'last_test': self.days,
-                    'encounters': value['encounters']
+                    'date': self.days,
+                    'encounters': value['encounters'],
+                    'idx': idx,
+                    'test': self.test
                 }
-                word_stats[key] = ws
+                word_stats[key] = [ws]
             else:
-                ws = word_stats[key]
-                ws['last_test'] = self.days
+                ws = copy.deepcopy(word_stats[key][-1])
+                word_stats[key].append(ws)
+                ws['date'] = self.days
                 ws['encounters'] += value['encounters']
+                ws['idx'] = idx
+                ws['test'] = self.test
             for a in range(4):
                 lr = avg_rates[a]
                 # freeze updates during test
                 if self.test:
                     lr = 0
                 errnew = value['outcome'] / value['encounters']
-                hitnew = 1 - errnew
                 for _ in range(value['encounters']):
                     ws['erravg'][a] = ws['erravg'][a] + lr * (errnew - ws['erravg'][a])
 
@@ -338,7 +347,13 @@ class Instance:
         if self.id in labels:
             self.label = labels[self.id]
 
-    def tally_performance(self, word_stats, to_add):
+    def tally_performance(self, word_stats, to_add, idx, total):
+        if self.exercise.test:
+            last_labeled_idx = self.user.n_train - 1
+        else:
+            n_back = int(np.ceil(np.random.random() * (self.user.n_test-1)))
+            last_labeled_idx = idx - n_back
+
         if self.root_token != self.token:
             keys = [('token:' + self.token, 'token'),
                     ('root:' + self.root_token, 'root')]
@@ -346,26 +361,48 @@ class Instance:
             keys = [('token:' + self.token, 'token')]
         for key in keys:
             if key[0] in word_stats:
-                ws = word_stats[key[0]]
-                logenc = np.log1p(ws['encounters'])
-                for a in range(4):
-                    self.features[key[1] + ':erravg'+str(a)] = ws['erravg'][a]
-                    self.features[key[1] + ':erravg'+str(a) + '_x_logenc'] = logenc * ws['erravg'][a]
-                self.features[key[1] + ':log_time_since_last_test'] = np.log1p(self.exercise.days -
-                                                         ws['last_test'])
-                self.features[key[1] + ':time_since_last_test'] = (self.exercise.days -
-                                                         ws['last_test'])
-                self.features[key[1] + ':log_encounters'] = logenc
-                self.features[key[1] + ':encounters'] = (ws['encounters'])
+                ws_list = word_stats[key[0]]
+                ws_idx = len(ws_list) - 1
+                while (ws_idx > -1 and
+                       ws_list[ws_idx]['idx'] > last_labeled_idx):
+                    ws_idx = ws_idx - 1
+                if ws_idx == -1:
+                    ws_unlab = ws_list[-1]
+                    self.features[key[1] + ':encounters_lab'] = 0
+                    self.features[key[1] + ':encounters_unlab'] = ws_unlab['encounters']
+                    self.features[key[1] + ':encounters'] = ws_unlab['encounters']
+                    self.features[key[1] + ':time_since_last_unlab'] = (self.exercise.days -
+                                                                       ws_unlab['date'])
+                else:
+                    ws_lab = ws_list[ws_idx]
+                    ws_unlab = ws_list[-1]
+                    logenc = np.log1p(ws_lab['encounters'])
+                    for a in range(4):
+                        self.features[key[1] + ':erravg'+str(a)] = ws_lab['erravg'][a]
+                        self.features[key[1] + ':erravg'+str(a) + '_x_logenc'] = logenc * ws_lab['erravg'][a]
+                    self.features[key[1] + ':log_time_since_last_lab'] = np.log1p(self.exercise.days -
+                                                                                   ws_lab['date'])
+                    self.features[key[1] + ':time_since_last_lab'] = (self.exercise.days -
+                                                                       ws_lab['date'])
+                    self.features[key[1] + ':log_encounters_lab'] = logenc
+                    self.features[key[1] + ':encounters'] = (ws_unlab['encounters'])
+                    self.features[key[1] + ':encounters_lab'] = (ws_lab['encounters'])
+                    self.features[key[1] + ':encounters_unlab'] = ws_unlab['encounters'] - ws_lab['encounters']
+                    self.features[key[1] + ':time_since_last_unlab'] = (self.exercise.days -
+                                                                       ws_unlab['date'])
             else:
                 self.features[key[1] + ':first_encounter'] = 1.0
+                self.features[key[1] + ':encounters'] = 0
+                self.features[key[1] + ':encounters_lab'] = 0
+                self.features[key[1] + ':encounters_unlab'] = 0
             if key[0] not in to_add:
                 to_add[key[0]] = {'outcome': 0.0, 'encounters': 0}
             ta = to_add[key[0]]
             ta['encounters'] += 1
-            if self.label is not None and not self.exercise.test:
-                if self.label:
-                    ta['outcome'] += self.label
+            # if self.label is not None and not self.exercise.test:
+            if not self.exercise.test:
+                # if self.label:
+                ta['outcome'] += self.label
             else:
                 ta['outcome'] += 0.0
 
@@ -385,6 +422,3 @@ class Instance:
         else:
             self.features['root_pos:'+root_inst.part_of_speech] = 1.0
             # self.features['root_enc'] = root_inst.features['token:encounters']
-
-        # self.features['next_pos:'+next_pos] = 1.0
-        # self.features['root_pos:'+root_pos] = 1.0
