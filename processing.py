@@ -182,22 +182,14 @@ class User:
 
         self.n_train = sum([not e.test for e in self.exercises])
         self.n_test = sum([e.test for e in self.exercises])
-
-        # calculate some simple exercise-level features
+        self.n_total = len(self.exercises)
+        stats = []
+        for e in self.exercises:
+            e.build_temporal_stats(stats)
         for i, e in enumerate(self.exercises):
-            info = {'exercise_num': i}
-            e.set_exercise_features(info)
-
-        # tally performance history for each word
-        self.tally_performance()
+            e.encode_temporal_stats(stats, i)
         for e in self.exercises:
             e.set_others_pos()
-
-    def tally_performance(self):
-        word_stats = dict()
-        tot = len(self.exercises)
-        for idx, e in enumerate(self.exercises):
-            e.tally_performance(word_stats, idx, tot)
 
 
 class Exercise:
@@ -211,7 +203,7 @@ class Exercise:
         # information, along with the creating User and whether this exercise
         # is in the test set.
         self.features = dict()
-        self.user_obj = user
+        self.user = user
         self.test = test
         self.instances = []
         for t in textlist[1:]:
@@ -231,10 +223,12 @@ class Exercise:
                     value = int(value)
                     if value < 1:
                         value = None
-            setattr(self, key, value)
+            if key != 'user':
+                setattr(self, key, value)
         self.features['format:' + self.format] = 1.0
         self.features['session:' + self.session] = 1.0
         self.features['client:' + self.client] = 1.0
+        self.features['exercise_length'] = len(self.instances)
         if self.time is not None:
             self.features['time'] = self.time
             self.features['log_time'] = np.log1p(self.time)
@@ -265,43 +259,52 @@ class Exercise:
         for i in self.instances:
             i.propagate_labels(labels)
 
-    def set_exercise_features(self, info_from_user):
-        self.features['exercise_num'] = info_from_user['exercise_num']
-        self.features['log_exercise_num'] = np.log1p(info_from_user['exercise_num'])
-        self.features['exercise_length'] = len(self.instances)
-        self.features['log_exercise_length'] = np.log1p(len(self.instances))
-
-    def tally_performance(self, word_stats, idx, total):
-        avg_rates = [.3, .1, .03, .01]
-        to_add = dict()
+    def build_temporal_stats(self, stats):
+        # stats holds a list of dictionaries. Each element in the list is a
+        # snapshot of the learning history with every encountered word at a
+        # specific exercise index
+        idx = len(stats)
+        if idx == 0:
+            ex_stats = {}
+            stats.append(ex_stats)
+        else:
+            ex_stats = copy.copy(stats[-1])
+            stats.append(ex_stats)
+        to_add = {}
         for i in self.instances:
-            i.tally_performance(word_stats, to_add, idx, total)
+            i.build_temporal_stats(to_add)
+        err_lr_list = [.3, .1, .03, .01]
         for key, value in to_add.items():
-            if key not in word_stats:
+            # create a new dictionary for each word that
+            # occurs in the exercise
+            if key not in ex_stats:
                 ws = {
                     'erravg': [0] * 4,
                     'date': self.days,
                     'encounters': value['encounters'],
                     'idx': idx,
-                    'test': self.test
                 }
-                word_stats[key] = [ws]
+                ex_stats[key] = ws
             else:
-                ws = copy.deepcopy(word_stats[key][-1])
-                word_stats[key].append(ws)
+                ws = copy.deepcopy(ex_stats[key])
+                ex_stats[key] = ws
                 ws['date'] = self.days
                 ws['encounters'] += value['encounters']
                 ws['idx'] = idx
-                ws['test'] = self.test
-            for a in range(4):
-                lr = avg_rates[a]
-                # freeze updates during test
+            # update error trackers
+            for i, lr in enumerate(err_lr_list):
                 if self.test:
                     lr = 0
                 errnew = value['outcome'] / value['encounters']
-                for _ in range(value['encounters']):
-                    ws['erravg'][a] = ws['erravg'][a] + lr * (errnew - ws['erravg'][a])
+                ws['erravg'][i] = (
+                    ws['erravg'][i] +
+                    lr * (errnew - ws['erravg'][i])
+                )
 
+    def encode_temporal_stats(self, stats, idx):
+        self.features['exercise_num'] = idx
+        for i in self.instances:
+            i.encode_temporal_stats(stats, idx)
 
 class Instance:
     """
@@ -331,10 +334,10 @@ class Instance:
         if len(line) == 8:
             self.label = float(line[7])
         # add initial features to feature dictionary
-        self.features['token'] = self.token
+        self.features['token:'+self.token] = 1.0
         self.features['word_length'] = len(self.token)
         if self.root_token != self.token:
-            self.features['root_token'] = self.root_token
+            self.features['token:'+self.root_token] = 1.0
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
         for key, value in self.morphological_features.items():
             self.features['morphological_feature:' + key + '_' + value] = 1.0
@@ -347,78 +350,68 @@ class Instance:
         if self.id in labels:
             self.label = labels[self.id]
 
-    def tally_performance(self, word_stats, to_add, idx, total):
+    def build_temporal_stats(self, to_add):
+        keys = ['token:' + self.token, 'root:' + self.root_token]
+        for key in keys:
+            if key not in to_add:
+                to_add[key] = {'outcome': 0.0, 'encounters': 0}
+            ta = to_add[key]
+            ta['encounters'] += 1
+            if not self.exercise.test:
+                ta['outcome'] += self.label
+            else:
+                ta['outcome'] += 0.0
+
+    def encode_temporal_stats(self, stats, idx):
+        # stats holds a list of dictionaries. Each element in the list is a
+        # snapshot of the learning history with every encountered word at a
+        # specific exercise index.
+        # For creating features, we imagine that a random number of recent exercises
+        # in the range [1, number of test items] were test items, and don't look at
+        # the error information for those items.
         if self.exercise.test:
             last_labeled_idx = self.user.n_train - 1
         else:
             n_back = int(np.ceil(np.random.random() * (self.user.n_test-1)))
             last_labeled_idx = idx - n_back
-
-        if self.root_token != self.token:
-            keys = [('token:' + self.token, 'token'),
-                    ('root:' + self.root_token, 'root')]
+        if last_labeled_idx < 0:
+            last_labeled_idx = -1
+            ex_stats_lab = {}
         else:
-            keys = [('token:' + self.token, 'token')]
+            ex_stats_lab = stats[last_labeled_idx]
+        ex_stats = stats[idx - 1]
+        keys = [('token:' + self.token, 'token'),
+                ('root:' + self.root_token, 'root')]
         for key in keys:
-            if key[0] in word_stats:
-                ws_list = word_stats[key[0]]
-                ws_idx = len(ws_list) - 1
-                while (ws_idx > -1 and
-                       ws_list[ws_idx]['idx'] > last_labeled_idx):
-                    ws_idx = ws_idx - 1
-                if ws_idx == -1:
-                    ws_unlab = ws_list[-1]
-                    self.features[key[1] + ':encounters_lab'] = 0
-                    self.features[key[1] + ':encounters_unlab'] = ws_unlab['encounters']
-                    self.features[key[1] + ':encounters'] = ws_unlab['encounters']
-                    self.features[key[1] + ':time_since_last_unlab'] = (self.exercise.days -
-                                                                       ws_unlab['date'])
+            if key[0] in ex_stats:
+                ws = ex_stats[key[0]]
+                self.features[key[1] + ':encounters'] = ws['encounters']
+                self.features[key[1] + ':time_since_last_encounter'] = (self.exercise.days - ws['date'])
+                if key[0] in ex_stats_lab:
+                    ws_lab = ex_stats_lab[key[0]]
+                    self.features[key[1] + ':time_since_last_label'] = (self.exercise.days - ws_lab['date'])
+                    self.features[key[1] + ':encounters_lab'] = ws_lab['encounters']
+                    for i, err in enumerate(ws_lab['erravg']):
+                        self.features[key[1] + ':erravg'+str(i)] = err
+                    self.features[key[1] + ':encounters_unlab'] = ws['encounters'] - ws_lab['encounters']
                 else:
-                    ws_lab = ws_list[ws_idx]
-                    ws_unlab = ws_list[-1]
-                    logenc = np.log1p(ws_lab['encounters'])
-                    for a in range(4):
-                        self.features[key[1] + ':erravg'+str(a)] = ws_lab['erravg'][a]
-                        self.features[key[1] + ':erravg'+str(a) + '_x_logenc'] = logenc * ws_lab['erravg'][a]
-                    self.features[key[1] + ':log_time_since_last_lab'] = np.log1p(self.exercise.days -
-                                                                                   ws_lab['date'])
-                    self.features[key[1] + ':time_since_last_lab'] = (self.exercise.days -
-                                                                       ws_lab['date'])
-                    self.features[key[1] + ':log_encounters_lab'] = logenc
-                    self.features[key[1] + ':encounters'] = (ws_unlab['encounters'])
-                    self.features[key[1] + ':encounters_lab'] = (ws_lab['encounters'])
-                    self.features[key[1] + ':encounters_unlab'] = ws_unlab['encounters'] - ws_lab['encounters']
-                    self.features[key[1] + ':time_since_last_unlab'] = (self.exercise.days -
-                                                                       ws_unlab['date'])
+                    self.features[key[1] + ':time_since_last_label'] = -99
+                    self.features[key[1] + ':encounters_unlab'] = ws['encounters']
             else:
                 self.features[key[1] + ':first_encounter'] = 1.0
-                self.features[key[1] + ':encounters'] = 0
-                self.features[key[1] + ':encounters_lab'] = 0
-                self.features[key[1] + ':encounters_unlab'] = 0
-            if key[0] not in to_add:
-                to_add[key[0]] = {'outcome': 0.0, 'encounters': 0}
-            ta = to_add[key[0]]
-            ta['encounters'] += 1
-            # if self.label is not None and not self.exercise.test:
-            if not self.exercise.test:
-                # if self.label:
-                ta['outcome'] += self.label
-            else:
-                ta['outcome'] += 0.0
+                self.features[key[1] + ':time_since_last_encounter'] = -99
+                self.features[key[1] + ':time_since_last_label'] = -99
 
     def set_others_pos(self, prev_inst, next_inst, root_inst):
         if prev_inst is None:
             self.features['prev_pos:None'] = 1.0
         else:
             self.features['prev_pos:'+prev_inst.part_of_speech] = 1.0
-            # self.features['prev_enc'] = prev_inst.features['token:encounters']
         if next_inst is None:
             self.features['next_pos:None'] = 1.0
         else:
             self.features['next_pos:'+next_inst.part_of_speech] = 1.0
-            # self.features['next_enc'] = next_inst.features['token:encounters']
         if root_inst is None:
             self.features['root_pos:None'] = 1.0
         else:
             self.features['root_pos:'+root_inst.part_of_speech] = 1.0
-            # self.features['root_enc'] = root_inst.features['token:encounters']
