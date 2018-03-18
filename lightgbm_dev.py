@@ -6,7 +6,7 @@ from sklearn.metrics import roc_auc_score
 import lightgbm as lgb
 
 # use this to change language pair trained on
-lang = 'all'
+lang = 'en_es'
 # lightgbm parameters for each model. Different ones might be better for
 # different language pairs
 params = {
@@ -16,7 +16,7 @@ params = {
         'learning_rate': .1,
         'num_leaves': 128,
         'min_data_in_leaf': 20,
-        'num_boost_round': 800
+        'num_boost_round': 800  # why are there different num_boost_rounds for different lanauges?
     },
     'en_es': {
         'application': 'binary',

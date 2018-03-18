@@ -5,7 +5,7 @@ The main function is build_data, which takes train and test file names and
 returns lists of dictionaries containing instance features, as well as lists of
 instance id's and labels.
 
-The feature set is build in a nested manner. First, a User object is created
+The feature set is builtt in a nested manner. First, a User object is created
 when a new user id is found in the data, then Exercise objects are added as
 more exercises for the user are found. The Exercise object in turn creates a
 set of Instance objects corresponding to each word in the Exercise.
@@ -108,20 +108,20 @@ def _load_file(datafile, users, test, n_users):
             if len(line) == 0 and len(exercise_lines) == 0:
                 continue
             elif len(line) == 0:
-                if test and line_user not in users:
+                if test and line_user not in users:  
                     break
-                elif usernum == n_users and line_user not in users:
+                elif usernum == n_users and line_user not in users:  # stop if we get too many users
                     break
-                elif line_user not in users:
-                    users[line_user] = User(line_user, lang)
+                elif line_user not in users:  # create a new user we encountered
+                    users[line_user] = User(line_user, lang) 
                     usernum += 1
-                users[line_user].add_exercise(exercise_lines, test)
-                exercise_lines = []
+                users[line_user].add_exercise(exercise_lines, test) # add the exercise lines following the user record
+                exercise_lines = [] # reset exercise lines
             elif line[0] == "#":
                 # add language to end of user for combined training in case
                 # some users are in multiple languages (don't know if this
                 # actually occurs)
-                line_user = line[7:15] + lang
+                line_user = line[7:15] + lang 
                 exercise_lines.append(line)
             else:
                 exercise_lines.append(line)
@@ -144,6 +144,8 @@ class User:
 
     def add_exercise(self, textlist, test):
         # add new Exercise object to process chunk of input lines
+        # each time this is called it is the entire block
+        # for a particular entry
         self.exercises.append(Exercise(textlist, self, test, self.lang))
 
     def add_instance(self, instance):
@@ -206,6 +208,7 @@ class Exercise:
         self.user = user
         self.test = test
         self.instances = []
+        self.textlist = textlist
         for t in textlist[1:]:
             self.instances.append(Instance(t, self, user, lang))
         line = textlist[0][2:].split()
