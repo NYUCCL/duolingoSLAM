@@ -8,7 +8,7 @@ and unzip in the "data" folder
 
 ## Working on the project
 
-Make sure you download the "new" data files, found in the dropbox link I posted on slack.
+Make sure you download the "new" data files, found in the dropbox link I posted on slack. (https://www.dropbox.com/s/7b2p1unpxy61bq4/data.zip?dl=0)
 
 To run the model and test on the dev set, use `lightgbm_dev.py`. The gradient
 boosting solution really works much better than the linear model right now. For

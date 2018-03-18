@@ -4,9 +4,15 @@ import pandas as pd
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import roc_auc_score
 import lightgbm as lgb
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--lang', default='en_es')
 
 # use this to change language pair trained on
-lang = 'en_es'
+args = vars(parser.parse_args())
+lang = args['lang']
+print('using ' + lang + ' dataset')
 # lightgbm parameters for each model. Different ones might be better for
 # different language pairs
 params = {
