@@ -8,11 +8,13 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--lang', default='en_es')
+parser.add_argument('--users', default='100')
 
 # use this to change language pair trained on
 args = vars(parser.parse_args())
 lang = args['lang']
-print('using ' + lang + ' dataset')
+users = args['users']
+print('using ' + lang + ' dataset, ' + users + ' users')
 # lightgbm parameters for each model. Different ones might be better for
 # different language pairs
 params = {
@@ -74,14 +76,14 @@ if lang == 'all':
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('fr_en'),
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('es_en')
         ],
-        n_users=None)
+        n_users=int(users))
 else:
     data = build_data(
         lang[:2],
         ['data/data_{0}/{0}.slam.20171218.train.new'.format(lang)],
         ['data/data_{0}/{0}.slam.20171218.dev.new'.format(lang)],
         labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
-        n_users=None)
+        n_users=int(users))
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
 
