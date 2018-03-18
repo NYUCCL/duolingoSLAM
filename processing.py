@@ -26,6 +26,7 @@ each instance.
 from collections import OrderedDict
 import numpy as np
 import copy
+import hashlib
 
 
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
@@ -193,6 +194,18 @@ class User:
         for e in self.exercises:
             e.set_others_pos()
 
+        episode_counts = {}
+        for e in self.exercises: # set a feature for the number of times the context has been repeated
+            ex = e.instances
+            words = ','.join([i.token for i in ex])
+            hash_object = hashlib.md5(words.encode())
+            mykey = hash_object.hexdigest()
+            if mykey in episode_counts:
+                episode_counts[mykey]+=1
+            else:
+                episode_counts[mykey]=1
+            e.set_context(episode_counts[mykey])
+
 
 class Exercise:
     """
@@ -260,6 +273,10 @@ class Exercise:
     def propagate_labels(self, labels):
         for i in self.instances:
             i.propagate_labels(labels)
+
+    def set_context(self, freq):
+        setattr(self,'context_rep',freq)
+        self.features['context_rep'] = freq
 
     def build_temporal_stats(self, stats):
         # stats holds a list of dictionaries. Each element in the list is a
