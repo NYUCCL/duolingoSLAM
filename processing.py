@@ -234,7 +234,6 @@ class Exercise:
         self.features['exercise_length'] = len(self.instances)
         if self.time is not None:
             self.features['time'] = self.time
-            self.features['log_time'] = np.log1p(self.time)
 
     def set_others_pos(self):
         for idx, instance in enumerate(self.instances):
@@ -337,10 +336,9 @@ class Instance:
         if len(line) == 8:
             self.label = float(line[7])
         # add initial features to feature dictionary
-        self.features['token:'+self.token] = 1.0
+        self.features['token'] = self.token
         self.features['word_length'] = len(self.token)
-        if self.root_token != self.token:
-            self.features['token:'+self.root_token] = 1.0
+        self.features['root'] = self.root_token
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
         for key, value in self.morphological_features.items():
             self.features['morphological_feature:' + key + '_' + value] = 1.0
@@ -382,7 +380,7 @@ class Instance:
             ex_stats_lab = {}
         else:
             ex_stats_lab = stats[last_labeled_idx]
-        ex_stats = stats[idx - 1]
+        ex_stats = stats[max([idx - 1, 0])]
         keys = [('token:' + self.token, 'token'),
                 ('root:' + self.root_token, 'root')]
         for key in keys:
@@ -408,13 +406,19 @@ class Instance:
     def set_others_pos(self, prev_inst, next_inst, root_inst):
         if prev_inst is None:
             self.features['prev_pos:None'] = 1.0
+            self.features['prev_token'] = '_NONE_'
         else:
             self.features['prev_pos:'+prev_inst.part_of_speech] = 1.0
+            self.features['prev_token'] = prev_inst.token
         if next_inst is None:
             self.features['next_pos:None'] = 1.0
+            self.features['next_token'] = '_NONE_'
         else:
             self.features['next_pos:'+next_inst.part_of_speech] = 1.0
+            self.features['next_token'] = next_inst.token
         if root_inst is None:
-            self.features['root_pos:None'] = 1.0
+            self.features['parseroot_pos:None'] = 1.0
+            self.features['parseroot_token'] = '_NONE_'
         else:
-            self.features['root_pos:'+root_inst.part_of_speech] = 1.0
+            self.features['parseroot_pos:'+root_inst.part_of_speech] = 1.0
+            self.features['parseroot_token'] = root_inst.token

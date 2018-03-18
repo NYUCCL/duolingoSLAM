@@ -77,6 +77,21 @@ else:
     n_users=None)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
+cat_features = ['token', 'root', 'user',
+                'prev_token', 'next_token', 'parseroot_token']
+for key in cat_features:
+    val_dict = {}
+    val_idx = 0
+    for d in train_x + test_x:
+        t = d[key]
+        if t in val_dict:
+            d[key] = val_dict[t]
+        else:
+            val_dict[t] = val_idx
+            d[key] = val_idx
+            val_idx += 1
+
+
 # put data in scipy sparse matrix
 dv = DictVectorizer()
 train_x_sparse = dv.fit_transform(train_x)
@@ -90,6 +105,7 @@ d_train = lgb.Dataset(train_x_sparse, label=train_y)
 bst = lgb.train(params[lang], d_train, valid_sets=[d_train],
                 valid_names=['train', 'valid'],
                 feature_name=names,
+                categorical_feature=cat_features,
                 num_boost_round=params[lang]['num_boost_round'],
                 verbose_eval=10)
 

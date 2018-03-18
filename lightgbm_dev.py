@@ -14,33 +14,38 @@ params = {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .1,
-        'num_leaves': 128,
+        'num_leaves': 64,
         'min_data_in_leaf': 20,
-        'num_boost_round': 800  # why are there different num_boost_rounds for different lanauges?
+        'num_boost_round': 600,
+        'cat_smooth': 100,
     },
     'en_es': {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .1,
-        'num_leaves': 128,
+        'num_leaves': 64,
         'min_data_in_leaf': 20,
-        'num_boost_round': 1000
+        'num_boost_round': 600,
+        'cat_smooth': 100,
     },
     'es_en': {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .1,
-        'num_leaves': 128,
+        'num_leaves': 64,
         'min_data_in_leaf': 20,
-        'num_boost_round': 900
+        'num_boost_round': 600,
+        'cat_smooth': 100,
     },
     'all': {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .1,
-        'num_leaves': 256,
+        'num_leaves': 128,
         'min_data_in_leaf': 20,
-        'num_boost_round': 1400
+        'num_boost_round': 1000,
+        'cat_smooth': 100,
+        'max_cat_threshold': 64
     }
 }
 
@@ -73,6 +78,21 @@ else:
         n_users=None)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
+
+cat_features = ['token', 'root', 'user',
+                'prev_token', 'next_token', 'parseroot_token']
+for key in cat_features:
+    val_dict = {}
+    val_idx = 0
+    for d in train_x + test_x:
+        t = d[key]
+        if t in val_dict:
+            d[key] = val_dict[t]
+        else:
+            val_dict[t] = val_idx
+            d[key] = val_idx
+            val_idx += 1
+
 # put data in scipy sparse matrix
 dv = DictVectorizer()
 train_x_sparse = dv.fit_transform(train_x)
@@ -86,6 +106,7 @@ d_valid = lgb.Dataset(test_x_sparse, label=test_y)
 bst = lgb.train(params[lang], d_train, valid_sets=[d_train, d_valid],
                 valid_names=['train', 'valid'],
                 feature_name=names,
+                categorical_feature=cat_features,
                 num_boost_round=params[lang]['num_boost_round'],
                 verbose_eval=10)
 if not os.path.exists('models'):
