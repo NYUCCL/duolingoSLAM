@@ -14,6 +14,10 @@ parser.add_argument('--users', default='100')
 args = vars(parser.parse_args())
 lang = args['lang']
 users = args['users']
+if users == 'all':
+    n_users = None
+else:
+    n_users = int(users)
 print('using ' + lang + ' dataset, ' + users + ' users')
 # lightgbm parameters for each model. Different ones might be better for
 # different language pairs
@@ -76,14 +80,14 @@ if lang == 'all':
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('fr_en'),
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('es_en')
         ],
-        n_users=int(users))
+        n_users=n_users)
 else:
     data = build_data(
         lang[:2],
         ['data/data_{0}/{0}.slam.20171218.train.new'.format(lang)],
         ['data/data_{0}/{0}.slam.20171218.dev.new'.format(lang)],
         labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
-        n_users=int(users))
+        n_users=n_users)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
 
