@@ -28,6 +28,9 @@ import numpy as np
 import copy
 import hashlib
 
+success_failure = True
+ave_success = True
+
 
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
                n_users=None, featurized=True):
@@ -299,6 +302,8 @@ class Exercise:
             if key not in ex_stats:
                 ws = {
                     'erravg': [0] * 4,
+                    'successes': value['outcome'],
+                    'failures': 1 - value['outcome'],
                     'date': self.days,
                     'encounters': value['encounters'],
                     'idx': idx,
@@ -310,6 +315,8 @@ class Exercise:
                 ws['date'] = self.days
                 ws['encounters'] += value['encounters']
                 ws['idx'] = idx
+                ws['successes'] += value['outcome']
+                ws['failures'] += 1 - value['outcome']
             # update error trackers
             for i, lr in enumerate(err_lr_list):
                 if self.test:
@@ -359,6 +366,15 @@ class Instance:
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
         for key, value in self.morphological_features.items():
             self.features['morphological_feature:' + key + '_' + value] = 1.0
+        if all(k in self.morphological_features for k in ('tense', 'person', 'number')):
+            tense = self.morphological_features['tense']
+            person = self.morphological_features['person']
+            number = self.morphological_features['number']
+            #self.features['morphological_feature: verbconj_' + tense + '_' + person + '_' + number] = 1.0
+            self.verb_conj = tense + '_' + person + '_' + number
+        else:
+            self.verb_conj = -99
+        self.features['verb_conj'] = self.verb_conj
         self.features['dependency_label:' + self.dependency_label] = 1.0
 
     def to_features(self):
@@ -369,7 +385,7 @@ class Instance:
             self.label = labels[self.id]
 
     def build_temporal_stats(self, to_add):
-        keys = ['token:' + self.token, 'root:' + self.root_token]
+        keys = ['token:' + self.token, 'root:' + self.root_token, 'verb_conj:' + str(self.verb_conj)]
         for key in keys:
             if key not in to_add:
                 to_add[key] = {'outcome': 0.0, 'encounters': 0}
@@ -399,22 +415,39 @@ class Instance:
             ex_stats_lab = stats[last_labeled_idx]
         ex_stats = stats[max([idx - 1, 0])]
         keys = [('token:' + self.token, 'token'),
-                ('root:' + self.root_token, 'root')]
+                ('root:' + self.root_token, 'root'),
+                ('verb_conj:' + str(self.verb_conj), 'verb_conj')]
         for key in keys:
             if key[0] in ex_stats:
                 ws = ex_stats[key[0]]
                 self.features[key[1] + ':encounters'] = ws['encounters']
+                if success_failure:
+                    self.features[key[1] + ':successes'] = ws['successes']
+                    self.features[key[1] + ':failures'] = ws['failures']
                 self.features[key[1] + ':time_since_last_encounter'] = (self.exercise.days - ws['date'])
+
                 if key[0] in ex_stats_lab:
                     ws_lab = ex_stats_lab[key[0]]
                     self.features[key[1] + ':time_since_last_label'] = (self.exercise.days - ws_lab['date'])
                     self.features[key[1] + ':encounters_lab'] = ws_lab['encounters']
-                    for i, err in enumerate(ws_lab['erravg']):
-                        self.features[key[1] + ':erravg'+str(i)] = err
+                    if success_failure:
+                        self.features[key[1] + ':successes_lab'] = ws_lab['successes']
+                        self.features[key[1] + ':failures_lab'] = ws_lab['failures']
+
+                    if ave_success:
+                        for i, err in enumerate(ws_lab['erravg']):
+                            self.features[key[1] + ':erravg'+str(i)] = err
+
                     self.features[key[1] + ':encounters_unlab'] = ws['encounters'] - ws_lab['encounters']
+                    if success_failure:
+                        self.features[key[1] + ':successes_unlab'] = ws['successes'] - ws_lab['successes']
+                        self.features[key[1] + ':failures_unlab'] = ws['failures'] - ws_lab['failures']
                 else:
                     self.features[key[1] + ':time_since_last_label'] = -99
                     self.features[key[1] + ':encounters_unlab'] = ws['encounters']
+                    if success_failure:
+                        self.features[key[1] + ':successes_unlab'] = ws['successes']
+                        self.features[key[1] + ':failures_unlab'] = ws['failures']
             else:
                 self.features[key[1] + ':first_encounter'] = 1.0
                 self.features[key[1] + ':time_since_last_encounter'] = -99

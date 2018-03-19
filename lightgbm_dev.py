@@ -90,7 +90,7 @@ else:
         n_users=n_users)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
-
+print('creating dictionaries')
 cat_features = ['token', 'root', 'user',
                 'prev_token', 'next_token', 'parseroot_token']
 for key in cat_features:
@@ -105,6 +105,7 @@ for key in cat_features:
             d[key] = val_idx
             val_idx += 1
 
+print('vectorizing data')
 # put data in scipy sparse matrix
 dv = DictVectorizer()
 train_x_sparse = dv.fit_transform(train_x)
@@ -112,6 +113,7 @@ test_x_sparse = dv.transform(test_x)
 
 names = dv.feature_names_
 
+print('training model')
 # train light gradient boosting machine model
 d_train = lgb.Dataset(train_x_sparse, label=train_y)
 d_valid = lgb.Dataset(test_x_sparse, label=test_y)
