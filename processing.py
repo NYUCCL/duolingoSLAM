@@ -242,6 +242,7 @@ class Exercise:
             if key != 'user':
                 setattr(self, key, value)
         self.features['format:' + self.format] = 1.0
+        self.features['days'] = self.days
         self.features['session:' + self.session] = 1.0
         self.features['client:' + self.client] = 1.0
         self.features['exercise_length'] = len(self.instances)
@@ -421,21 +422,10 @@ class Instance:
                 self.features[key[1] + ':time_since_last_label'] = -99
 
     def set_others_pos(self, prev_inst, next_inst, root_inst):
-        if prev_inst is None:
-            self.features['prev_pos:None'] = 1.0
-            self.features['prev_token'] = '_NONE_'
-        else:
-            self.features['prev_pos:'+prev_inst.part_of_speech] = 1.0
-            self.features['prev_token'] = prev_inst.token
-        if next_inst is None:
-            self.features['next_pos:None'] = 1.0
-            self.features['next_token'] = '_NONE_'
-        else:
-            self.features['next_pos:'+next_inst.part_of_speech] = 1.0
-            self.features['next_token'] = next_inst.token
-        if root_inst is None:
-            self.features['parseroot_pos:None'] = 1.0
-            self.features['parseroot_token'] = '_NONE_'
-        else:
-            self.features['parseroot_pos:'+root_inst.part_of_speech] = 1.0
-            self.features['parseroot_token'] = root_inst.token
+        for inst, name in [(prev_inst, 'prev'), (next_inst, 'next'), (root_inst, 'parseroot')]:
+            if inst is None:
+                self.features[name + '_pos:None'] = 1.0
+                self.features[name + '_token'] = '_NONE_'
+            else:
+                self.features[name + '_pos:' + inst.part_of_speech] = 1.0
+                self.features[name + '_token'] = inst.token

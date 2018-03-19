@@ -8,7 +8,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--lang', default='en_es')
-parser.add_argument('--users', default='100')
+parser.add_argument('--users', default='all')
 
 # use this to change language pair trained on
 args = vars(parser.parse_args())
@@ -28,8 +28,9 @@ params = {
         'learning_rate': .05,
         'num_leaves': 256,
         'min_data_in_leaf': 100,
-        'num_boost_round': 800,
+        'num_boost_round': 750,
         'cat_smooth': 200,
+        'feature_fraction': .7,
     },
     'en_es': {
         'application': 'binary',
@@ -39,6 +40,7 @@ params = {
         'min_data_in_leaf': 100,
         'num_boost_round': 800,
         'cat_smooth': 200,
+        'feature_fraction': .7,
     },
     'es_en': {
         'application': 'binary',
@@ -48,6 +50,7 @@ params = {
         'min_data_in_leaf': 100,
         'num_boost_round': 900,
         'cat_smooth': 200,
+        'feature_fraction': .7,
     },
     'all': {
         'application': 'binary',
@@ -57,7 +60,8 @@ params = {
         'min_data_in_leaf': 100,
         'num_boost_round': 1000,
         'cat_smooth': 200,
-        'max_cat_threshold': 64
+        'max_cat_threshold': 64,
+        'feature_fraction': .7,
     }
 }
 
