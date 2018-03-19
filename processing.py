@@ -28,7 +28,6 @@ import numpy as np
 import copy
 import hashlib
 
-
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
                n_users=None, featurized=True):
     """
@@ -179,9 +178,39 @@ class User:
         for e in self.exercises:
             e.propagate_labels(labels)
 
+    def compute_usage_entropy(self):
+        # by Anselm:
+        x_days = [e.days%1.0 for e in self.exercises]
+        x_bins = [round(x * 24 * 3) for x in x_days]  # 20-minutes bins
+        freq = Counter(x_bins)
+        rel_freq = [freq[key]/len(x_bins) for key in freq]
+        self.entropy = entropy(rel_freq, base=2)
+        self.features['entropy'] = self.entropy
+
+    def compute_motivation(self):
+        # by Todd:
+        x_days = [e.days for e in self.exercises]
+        sessions = [[]]
+        sindex = 0
+        t_minus = x_days[0]
+        sessions[sindex].append(t_minus)
+        for t in x_days[1:]:
+            if t-t_minus > (1./24.): # if more than a day passed
+                sessions.append([])
+                sindex+=1
+            sessions[sindex].append(t)
+            t_minus = t
+        bursts = np.array([len(i) for i in sessions])
+        self.features['burst_length'] = len(bursts)
+        self.features['mean_burst_duration'] = np.mean(bursts)
+        self.features['median_burst_duration'] = np.median(bursts)
+
     def build_all(self):
         # create all higher-order features for this user, and its Exercises and
         # Instances. This function can be modified to build more features!
+
+        self.compute_usage_entropy()
+        self.compute_motivation()
 
         self.n_train = sum([not e.test for e in self.exercises])
         self.n_test = sum([e.test for e in self.exercises])
