@@ -37,9 +37,9 @@ params = {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .05,
-        'num_leaves': 256,
+        'num_leaves': 512,
         'min_data_in_leaf': 100,
-        'num_boost_round': 800,
+        'num_boost_round': 650,
         'cat_smooth': 200,
         'feature_fraction': .7,
     },
@@ -47,9 +47,9 @@ params = {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .05,
-        'num_leaves': 256,
+        'num_leaves': 512,
         'min_data_in_leaf': 100,
-        'num_boost_round': 900,
+        'num_boost_round': 600,
         'cat_smooth': 200,
         'feature_fraction': .7,
     },
@@ -57,9 +57,9 @@ params = {
         'application': 'binary',
         'metric': 'auc',
         'learning_rate': .05,
-        'num_leaves': 512,
+        'num_leaves': 1024,
         'min_data_in_leaf': 100,
-        'num_boost_round': 1000,
+        'num_boost_round': 750,
         'cat_smooth': 200,
         'max_cat_threshold': 64,
         'feature_fraction': .7,
@@ -98,6 +98,31 @@ else:
                       labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
                       n_users=n_users)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
+
+word_feat = 'token'
+word_stats = {}
+if lang == 'all':
+    langlist = ['en_es', 'fr_en', 'es_en']
+else:
+    langlist = [lang]
+for l in langlist:
+    with open('data/'+l+'_wordwordfeats.txt', 'r') as f:
+        for line in f.readlines():
+            line = line.split(',')
+            # add language identifier tag to end of word,
+            # as is done in features
+            word_stats[line[0].lower()+'_'+l[:2]] = {
+                'frequency': float(line[2]),
+                'levenshtein': int(line[3]),
+                'leven_frac': float(line[4])
+            }
+for d in train_x + test_x:
+    word = d[word_feat].lower()
+    if word in word_stats:
+        stats = word_stats[word]
+        d['frequency'] = stats['frequency']
+        d['levenshtein'] = stats['levenshtein']
+        d['leven_frac'] = stats['leven_frac']
 
 cat_features = ['token', 'root', 'user',
                 'prev_token', 'next_token', 'parseroot_token']
