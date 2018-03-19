@@ -447,11 +447,18 @@ class Instance:
                     self.features[key[1] + ':successes'] = np.nan
                     self.features[key[1] + ':failures'] = np.nan
                 self.features[key[1] + ':time_since_last_encounter'] = np.nan
-                self.features[key[1] + ':time_since_last_label'] = -99
+                self.features[key[1] + ':time_since_last_label'] = np.nan
+                self.features[key[1] + ':encounters_lab'] = np.nan
+                if success_failure:
+                    self.features[key[1] + ':successes_lab'] = np.nan
+                    self.features[key[1] + ':failures_lab'] = np.nan
                 self.features[key[1] + ':encounters_unlab'] = np.nan
                 if success_failure:
                     self.features[key[1] + ':successes_unlab'] = np.nan
                     self.features[key[1] + ':failures_unlab'] = np.nan
+                if ave_success:
+                    for i in range(4):
+                        self.features[key[1] + ':erravg'+str(i)] = np.nan
 
             elif key[0] in ex_stats:
                 ws = ex_stats[key[0]]
@@ -477,16 +484,34 @@ class Instance:
                     if success_failure:
                         self.features[key[1] + ':successes_unlab'] = ws['successes'] - ws_lab['successes']
                         self.features[key[1] + ':failures_unlab'] = ws['failures'] - ws_lab['failures']
+
                 else:
-                    self.features[key[1] + ':time_since_last_label'] = -99
+                    # labeled are all 0
+                    self.features[key[1] + ':time_since_last_label'] = np.nan
                     self.features[key[1] + ':encounters_unlab'] = ws['encounters']
                     if success_failure:
                         self.features[key[1] + ':successes_unlab'] = ws['successes']
                         self.features[key[1] + ':failures_unlab'] = ws['failures']
+
             else:
                 self.features[key[1] + ':first_encounter'] = 1.0
-                self.features[key[1] + ':time_since_last_encounter'] = -99
-                self.features[key[1] + ':time_since_last_label'] = -99
+                self.features[key[1] + ':encounters'] = np.nan
+                if success_failure:
+                    self.features[key[1] + ':successes'] = np.nan
+                    self.features[key[1] + ':failures'] = np.nan
+                self.features[key[1] + ':time_since_last_encounter'] = np.nan
+                self.features[key[1] + ':time_since_last_label'] = np.nan
+                self.features[key[1] + ':encounters_lab'] = np.nan
+                if success_failure:
+                    self.features[key[1] + ':successes_lab'] = np.nan
+                    self.features[key[1] + ':failures_lab'] = np.nan
+                self.features[key[1] + ':encounters_unlab'] = np.nan
+                if success_failure:
+                    self.features[key[1] + ':successes_unlab'] = np.nan
+                    self.features[key[1] + ':failures_unlab'] = np.nan
+                if ave_success:
+                    for i in range(4):
+                        self.features[key[1] + ':erravg'+str(i)] = np.nan
 
     def set_others_pos(self, prev_inst, next_inst, root_inst):
         if prev_inst is None:
