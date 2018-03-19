@@ -27,6 +27,9 @@ from collections import OrderedDict
 import numpy as np
 import copy
 import hashlib
+from collections import Counter
+from scipy.stats import entropy
+from scipy.stats.stats import pearsonr
 
 
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
@@ -179,9 +182,72 @@ class User:
         for e in self.exercises:
             e.propagate_labels(labels)
 
+    def compute_experience(self):
+        # by Anselm:
+        self.features['experience'] = len(self.exercises)
+
+    def compute_cor_mistakes_break(self):
+        exercise_mistakes = []
+        exercise_days_diff = []
+        days = 0
+        for e in self.exercises:
+            mistakes = len([1 for i in e.instances if not i.label == 0])
+            exercise_mistakes.append(mistakes)
+            days_diff = e.days - days
+            days = copy.deepcopy(e.days)  # save for next exercise loop
+            exercise_days_diff.append(days_diff)
+        cor = pearsonr(exercise_mistakes, exercise_days_diff)[0]
+        self.features['cor_mistakes_break'] = cor
+
+    def compute_usage_entropy(self):
+        # by Anselm:
+        x_days = [e.days%1.0 for e in self.exercises]
+        x_bins = [round(x * 24 * 3) for x in x_days]  # 20-minutes bins
+        freq = Counter(x_bins)
+        rel_freq = [freq[key]/len(x_bins) for key in freq]
+        self.entropy = entropy(rel_freq, base=2)
+        self.features['entropy'] = self.entropy
+
+    def compute_accuracy_variance(self):
+        # by Anselm:
+        x_accuracy = [e.accuracy for e in self.exercises if not e.test]
+        self.variance = np.var(x_accuracy)
+        self.features['variance'] = self.variance
+
+    def compute_motivation(self):
+        # by Todd:
+        x_days = [e.days for e in self.exercises]
+        sessions = [[]]
+        sindex = 0
+        t_minus = x_days[0]
+        sessions[sindex].append(t_minus)
+        for t in x_days[1:]:
+            if t-t_minus > (1./24.): # if more than a day passed
+                sessions.append([])
+                sindex+=1
+            sessions[sindex].append(t)
+            t_minus = t
+        bursts = np.array([len(i) for i in sessions])
+        self.features['burst_length'] = len(bursts)
+        self.features['mean_burst_duration'] = np.mean(bursts)
+        self.features['median_burst_duration'] = np.median(bursts)
+        # by Anselm:
+
+    def compute_accuracy(self):
+        # by Todd; edited by Anselm
+        avg = []
+        for e in self.exercises:
+            if not e.test:
+                avg.append(e.accuracy)
+        self.features['accuracy'] = np.mean(np.array(avg))
+
     def build_all(self):
         # create all higher-order features for this user, and its Exercises and
         # Instances. This function can be modified to build more features!
+
+        self.compute_experience()
+        self.compute_cor_mistakes_break()
+        self.compute_usage_entropy()
 
         self.n_train = sum([not e.test for e in self.exercises])
         self.n_test = sum([e.test for e in self.exercises])
@@ -247,6 +313,9 @@ class Exercise:
         self.features['exercise_length'] = len(self.instances)
         if self.time is not None:
             self.features['time'] = self.time
+        self.get_exercise_accuracy()
+        if not self.test:
+            self.features['accuracy'] = self.accuracy
 
     def set_others_pos(self):
         for idx, instance in enumerate(self.instances):
@@ -324,6 +393,13 @@ class Exercise:
         self.features['exercise_num'] = idx
         for i in self.instances:
             i.encode_temporal_stats(stats, idx)
+
+    def get_exercise_accuracy(self):
+        if self.test:
+            self.accuracy = None
+        else:
+            self.accuracy = np.mean(np.array([i.label for i in self.instances]))
+
 
 class Instance:
     """
