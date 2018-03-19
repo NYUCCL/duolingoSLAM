@@ -109,8 +109,13 @@ for l in langlist:
             word_stats[line[0].lower()+'_'+l[:2]] = {
                 'frequency': float(line[2]),
                 'levenshtein': int(line[3]),
-                'leven_frac': float(line[4])
+                'leven_frac': float(line[4]),
+                'aoa': float(line[5])
             }
+
+# aoa_xl = pd.ExcelFile("data/13428_2013_348_MOESM1_ESM.xlsx")
+# aoa_df = aoa_xl.parse('Sheet1')
+
 for d in train_x + test_x:
     word = d[word_feat].lower()
     if word in word_stats:
@@ -118,6 +123,7 @@ for d in train_x + test_x:
         d['frequency'] = stats['frequency']
         d['levenshtein'] = stats['levenshtein']
         d['leven_frac'] = stats['leven_frac']
+        d['aoa'] = stats['aoa']
 
 cat_features = ['token', 'root', 'user',
                 'prev_token', 'next_token', 'parseroot_token']
