@@ -94,14 +94,14 @@ else:
         n_users=n_users)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
-word_feat = 'root'
+word_feat = 'token'
 word_stats = {}
 if lang == 'all':
     langlist = ['en_es', 'fr_en', 'es_en']
 else:
     langlist = [lang]
 for l in langlist:
-    with open('data/'+l+'_rootwordfeats.txt', 'r') as f:
+    with open('data/'+l+'_wordwordfeats.txt', 'r') as f:
         for line in f.readlines():
             line = line.split(',')
             # add language identifier tag to end of word,
