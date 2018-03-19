@@ -4,43 +4,61 @@ import pandas as pd
 from sklearn.feature_extraction import DictVectorizer
 import lightgbm as lgb
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--lang', default='en_es')
+parser.add_argument('--users', default='100')
 
 # use this to change language pair trained on
-lang = 'all'
+args = vars(parser.parse_args())
+lang = args['lang']
+users = args['users']
+if users == 'all':
+    n_users = None
+else:
+    n_users = int(users)
+print('using ' + lang + ' dataset, ' + users + ' users')
+
 # lightgbm parameters for each model. Different ones might be better for
 # different language pairs
 params = {
     'fr_en': {
         'application': 'binary',
         'metric': 'auc',
-        'learning_rate': .1,
-        'num_leaves': 128,
-        'min_data_in_leaf': 20,
-        'num_boost_round': 800
+        'learning_rate': .05,
+        'num_leaves': 256,
+        'min_data_in_leaf': 100,
+        'num_boost_round': 800,
+        'cat_smooth': 200,
     },
     'en_es': {
         'application': 'binary',
         'metric': 'auc',
-        'learning_rate': .1,
-        'num_leaves': 128,
-        'min_data_in_leaf': 20,
-        'num_boost_round': 1000
+        'learning_rate': .05,
+        'num_leaves': 256,
+        'min_data_in_leaf': 100,
+        'num_boost_round': 800,
+        'cat_smooth': 200,
     },
     'es_en': {
         'application': 'binary',
         'metric': 'auc',
-        'learning_rate': .1,
-        'num_leaves': 128,
-        'min_data_in_leaf': 20,
-        'num_boost_round': 900
+        'learning_rate': .05,
+        'num_leaves': 256,
+        'min_data_in_leaf': 100,
+        'num_boost_round': 900,
+        'cat_smooth': 200,
     },
     'all': {
         'application': 'binary',
         'metric': 'auc',
-        'learning_rate': .1,
-        'num_leaves': 256,
-        'min_data_in_leaf': 20,
-        'num_boost_round': 1400
+        'learning_rate': .05,
+        'num_leaves': 512,
+        'min_data_in_leaf': 100,
+        'num_boost_round': 1000,
+        'cat_smooth': 200,
+        'max_cat_threshold': 64
     }
 }
 
@@ -67,14 +85,14 @@ if lang == 'all':
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('fr_en'),
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('es_en')
         ],
-        n_users=None)
+        n_users=n_users)
 else:
     data = build_data(lang[:2],
                       ['data/data_{0}/{0}.slam.20171218.train.new'.format(lang),
                        'data/data_{0}/{0}.slam.20171218.dev.new'.format(lang)],
                       ['data/data_{0}/test.{0}.new'.format(lang)],
                       labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
-    n_users=None)
+                      n_users=n_users)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
 cat_features = ['token', 'root', 'user',
