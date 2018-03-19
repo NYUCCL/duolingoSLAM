@@ -29,7 +29,8 @@ import copy
 import hashlib
 
 success_failure = True
-ave_success = True
+ave_success = False
+verbconj = False
 
 
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
@@ -366,15 +367,16 @@ class Instance:
         self.features['part_of_speech:' + self.part_of_speech] = 1.0
         for key, value in self.morphological_features.items():
             self.features['morphological_feature:' + key + '_' + value] = 1.0
-        if all(k in self.morphological_features for k in ('tense', 'person', 'number')):
-            tense = self.morphological_features['tense']
-            person = self.morphological_features['person']
-            number = self.morphological_features['number']
-            #self.features['morphological_feature: verbconj_' + tense + '_' + person + '_' + number] = 1.0
-            self.verb_conj = tense + '_' + person + '_' + number
-        else:
-            self.verb_conj = -99
-        self.features['verb_conj'] = self.verb_conj
+        if verbconj:
+            if all(k in self.morphological_features for k in ('tense', 'person', 'number')):
+                tense = self.morphological_features['tense']
+                person = self.morphological_features['person']
+                number = self.morphological_features['number']
+                #self.features['morphological_feature: verbconj_' + tense + '_' + person + '_' + number] = 1.0
+                self.verb_conj = tense + '_' + person + '_' + number
+            else:
+                self.verb_conj = -99
+            self.features['verb_conj'] = self.verb_conj
         self.features['dependency_label:' + self.dependency_label] = 1.0
 
     def to_features(self):
@@ -385,7 +387,10 @@ class Instance:
             self.label = labels[self.id]
 
     def build_temporal_stats(self, to_add):
-        keys = ['token:' + self.token, 'root:' + self.root_token, 'verb_conj:' + str(self.verb_conj)]
+        if verbconj:
+            keys = ['token:' + self.token, 'root:' + self.root_token, 'verb_conj:' + str(self.verb_conj)]
+        else:
+            keys = ['token:' + self.token, 'root:' + self.root_token]
         for key in keys:
             if key not in to_add:
                 to_add[key] = {'outcome': 0.0, 'encounters': 0}
@@ -414,9 +419,13 @@ class Instance:
         else:
             ex_stats_lab = stats[last_labeled_idx]
         ex_stats = stats[max([idx - 1, 0])]
-        keys = [('token:' + self.token, 'token'),
-                ('root:' + self.root_token, 'root'),
-                ('verb_conj:' + str(self.verb_conj), 'verb_conj')]
+        if verbconj:
+            keys = [('token:' + self.token, 'token'),
+                    ('root:' + self.root_token, 'root'),
+                    ('verb_conj:' + str(self.verb_conj), 'verb_conj')]
+        else:
+            keys = [('token:' + self.token, 'token'),
+                    ('root:' + self.root_token, 'root')]
         for key in keys:
             if key[0] in ex_stats:
                 ws = ex_stats[key[0]]
