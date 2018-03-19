@@ -28,6 +28,10 @@ import numpy as np
 import copy
 import hashlib
 
+from collections import Counter
+from scipy.stats import entropy
+from scipy.stats.stats import pearsonr
+
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
                n_users=None, featurized=True):
     """
