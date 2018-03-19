@@ -9,11 +9,18 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--lang', default='en_es')
 parser.add_argument('--users', default='100')
+parser.add_argument('--vc', action='store_true')
+parser.add_argument('--as', action='store_true')
+parser.add_argument('--sf', action='store_true')
 
 # use this to change language pair trained on
 args = vars(parser.parse_args())
 lang = args['lang']
 users = args['users']
+verbconj = args['vc']
+ave_success = args['as']
+success_failure = args['sf']
+
 if users == 'all':
     n_users = None
 else:
@@ -80,14 +87,14 @@ if lang == 'all':
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('fr_en'),
             'data/data_{0}/{0}.slam.20171218.dev.key'.format('es_en')
         ],
-        n_users=n_users)
+        n_users=n_users, my_sf=success_failure, my_as=ave_success, my_vc=verbconj)
 else:
     data = build_data(
         lang[:2],
         ['data/data_{0}/{0}.slam.20171218.train.new'.format(lang)],
         ['data/data_{0}/{0}.slam.20171218.dev.new'.format(lang)],
         labelfiles=['data/data_{0}/{0}.slam.20171218.dev.key'.format(lang)],
-        n_users=n_users)
+        n_users=n_users, my_sf=success_failure, my_as=ave_success, my_vc=verbconj)
 train_x, train_ids, train_y, test_x, test_ids, test_y = data
 
 print('creating dictionaries')

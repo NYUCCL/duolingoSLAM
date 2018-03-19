@@ -28,13 +28,13 @@ import numpy as np
 import copy
 import hashlib
 
-success_failure = True
-ave_success = False
+success_failure = False
+ave_success = True
 verbconj = False
 
 
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
-               n_users=None, featurized=True):
+               n_users=None, featurized=True, my_sf=False, my_as=True, my_vc=False):
     """
     This function loads and returns data and labels from a training and
     testfile, which are assumed to contain the same users. If a test
@@ -60,6 +60,13 @@ def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
         test_ids: see above.
         test_y: see above.
     """
+    global success_failure
+    success_failure = my_sf
+    global ave_success
+    ave_success = my_as
+    global verbconj
+    verbconj = my_vc
+    print_flags()
 
     users = OrderedDict()
     print('loading data files')
@@ -100,6 +107,13 @@ def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
         test_x = None
     return train_x, train_ids, train_y, test_x, test_ids, test_y
 
+def print_flags():
+    if(verbconj):
+        print('using verbconj')
+    if(ave_success):
+        print('using ave success')
+    if(success_failure):
+        print('using success and failure') 
 
 # helper function for load_data; handles loading of a single data file
 def _load_file(datafile, users, test, n_users):
@@ -375,7 +389,7 @@ class Instance:
                 #self.features['morphological_feature: verbconj_' + tense + '_' + person + '_' + number] = 1.0
                 self.verb_conj = tense + '_' + person + '_' + number
             else:
-                self.verb_conj = -99
+                self.verb_conj = np.nan
             self.features['verb_conj'] = self.verb_conj
         self.features['dependency_label:' + self.dependency_label] = 1.0
 
@@ -427,7 +441,19 @@ class Instance:
             keys = [('token:' + self.token, 'token'),
                     ('root:' + self.root_token, 'root')]
         for key in keys:
-            if key[0] in ex_stats:
+            if key[0] == 'verb_conj:' + str(np.nan):
+                self.features[key[1] + ':encounters'] = np.nan
+                if success_failure:
+                    self.features[key[1] + ':successes'] = np.nan
+                    self.features[key[1] + ':failures'] = np.nan
+                self.features[key[1] + ':time_since_last_encounter'] = np.nan
+                self.features[key[1] + ':time_since_last_label'] = -99
+                self.features[key[1] + ':encounters_unlab'] = np.nan
+                if success_failure:
+                    self.features[key[1] + ':successes_unlab'] = np.nan
+                    self.features[key[1] + ':failures_unlab'] = np.nan
+
+            elif key[0] in ex_stats:
                 ws = ex_stats[key[0]]
                 self.features[key[1] + ':encounters'] = ws['encounters']
                 if success_failure:
