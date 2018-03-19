@@ -31,6 +31,10 @@ from collections import Counter
 from scipy.stats import entropy
 from scipy.stats.stats import pearsonr
 
+from collections import Counter
+from scipy.stats import entropy
+from scipy.stats.stats import pearsonr
+
 def build_data(language, train_datafiles, test_datafiles, labelfiles=[],
                n_users=None, featurized=True):
     """
@@ -204,9 +208,44 @@ class User:
             sessions[sindex].append(t)
             t_minus = t
         bursts = np.array([len(i) for i in sessions])
+        
+        burst_starts = [b[0] for b in sessions]
+        diffs = []
+        for i in range(1,len(burst_starts)):
+            diffs.append(burst_starts[i]-burst_starts[i-1])
+
         self.features['burst_length'] = len(bursts)
         self.features['mean_burst_duration'] = np.mean(bursts)
         self.features['median_burst_duration'] = np.median(bursts)
+        if len(diffs)==0:
+            self.features['spacing']=0
+        else:
+            self.features['spacing']=np.mean(np.array(diffs))
+
+    def compute_spacing(self, exer):
+        if len(exer)==0:
+            return 0
+        x_days = [e.days for e in exer]
+        sessions = [[]]
+        sindex = 0
+        t_minus = x_days[0]
+        sessions[sindex].append(t_minus)
+        for t in x_days[1:]:
+            if t-t_minus > (1./24.): # if more than a day passed
+                sessions.append([])
+                sindex+=1
+            sessions[sindex].append(t)
+            t_minus = t
+        bursts = np.array([len(i) for i in sessions])        
+        burst_starts = [b[0] for b in sessions]
+        diffs = []
+        for i in range(1,len(burst_starts)):
+            diffs.append(burst_starts[i]-burst_starts[i-1])
+        if len(diffs)==0:
+            spacing=0
+        else:
+            spacing=np.mean(np.array(diffs))
+        return spacing
 
     def build_all(self):
         # create all higher-order features for this user, and its Exercises and
@@ -214,6 +253,9 @@ class User:
 
         self.compute_usage_entropy()
         self.compute_motivation()
+
+        for i in range(len(self.exercises)):
+            self.exercises[i].set_spacing(self.compute_spacing(self.exercises[:i]))
 
         self.n_train = sum([not e.test for e in self.exercises])
         self.n_test = sum([e.test for e in self.exercises])
@@ -279,6 +321,9 @@ class Exercise:
         self.features['exercise_length'] = len(self.instances)
         if self.time is not None:
             self.features['time'] = self.time
+
+    def set_spacing(self, val):
+        self.features['episode_spacing']=val
 
     def set_others_pos(self):
         for idx, instance in enumerate(self.instances):
