@@ -218,26 +218,14 @@ class User:
         self.n_train = sum([not e.test for e in self.exercises])
         self.n_test = sum([e.test for e in self.exercises])
         self.n_total = len(self.exercises)
-
-        lessons = practices = tests = 0
-        did_test = 0.0
         stats = []
         for e in self.exercises:
-            e.set_type_counters(lessons, practices, tests)
-            if e.session=="test":
-                did_test = 1.0
-                tests+=1
-            elif e.session=="practice":
-                practices+=1
-            else:
-                lessons+=1
             e.build_temporal_stats(stats)
         for i, e in enumerate(self.exercises):
             e.encode_temporal_stats(stats, i)
         for e in self.exercises:
             e.set_others_pos()
 
-        self.features['did_test']=did_test
         episode_counts = {}
         for e in self.exercises: # set a feature for the number of times the context has been repeated
             ex = e.instances
@@ -291,11 +279,6 @@ class Exercise:
         self.features['exercise_length'] = len(self.instances)
         if self.time is not None:
             self.features['time'] = self.time
-
-    def set_type_counters(self, l, p, t):
-        self.features['n_lessons']=l
-        self.features['n_practices']=p
-        self.features['n_tests']=t
 
     def set_others_pos(self):
         for idx, instance in enumerate(self.instances):
