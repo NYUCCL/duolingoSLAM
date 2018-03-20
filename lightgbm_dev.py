@@ -113,9 +113,6 @@ for l in langlist:
                 'aoa': float(line[5])
             }
 
-# aoa_xl = pd.ExcelFile("data/13428_2013_348_MOESM1_ESM.xlsx")
-# aoa_df = aoa_xl.parse('Sheet1')
-
 for d in train_x + test_x:
     word = d[word_feat].lower()
     if word in word_stats:
