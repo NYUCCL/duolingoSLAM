@@ -1,0 +1,157 @@
+%
+% File naaclhlt2018.tex
+%
+%% Based on the style files for NAACL-HLT 2018, which were
+%% Based on the style files for ACL-2015, with some improvements
+%%  taken from the NAACL-2016 style
+%% Based on the style files for ACL-2014, which were, in turn,
+%% based on ACL-2013, ACL-2012, ACL-2011, ACL-2010, ACL-IJCNLP-2009,
+%% EACL-2009, IJCNLP-2008...
+%% Based on the style files for EACL 2006 by 
+%%e.agirre@ehu.es or Sergi.Balari@uab.es
+%% and that of ACL 08 by Joakim Nivre and Noah Smith
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[hyperref]{naaclhlt2018}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{soul}
+
+\usepackage{url}
+
+\aclfinalcopy % Uncomment this line for the final submission
+%\def\aclpaperid{***} %  Enter the acl Paper ID here
+
+%\setlength\titlebox{5cm}
+% You can expand the titlebox if you need extra space
+% to show all the authors. Please do not make the titlebox
+% smaller than 5cm (the original size); we will check this
+% in the camera-ready version and ask you to change it back.
+
+\newcommand\BibTeX{B{\sc ib}\TeX}
+
+\title{Title: Something snappy about the SLAM competition}
+
+
+\author{Alexander S. Rich\qquad Pamela Osborn Popp\qquad David J. Halpern\\
+  \textbf{Anselm Rothe\qquad Todd M. Gureckis} \\
+  Department of Psychology, New York University \\
+  {\tt \{asr443,pamop,david.halpern,anselm,todd.gureckis\}@nyu.edu} \\}
+
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+\end{abstract}
+
+\section{Introduction}
+
+Blah Blah \cite{slam18}
+
+\section{Task Approach}
+
+We approached the task as a binary classification problem over instances (i.e.,
+single words within an exercise). Our solution can be divided into two
+components---constructing a set of features that is highly informative about
+whether the user will answer an instance correctly, and designing a model that
+can achieve high performance using this feature set.
+
+\subsection{Feature Engineering}
+
+We used a variety of features, including features directly present in the
+training data, features constructed using the training data, and features that
+use information external to the training data. Except where otherwise specified,
+categorical variables were one-hot encoded.
+
+\subsubsection{Exercise features}
+
+We encoded the exercise client, session, format, and time (i.e., number of
+seconds to complete the exercise), as well as the exercise number and number of
+days since start of usage.
+
+\subsubsection{Word features}
+
+Using spaCy\footnote{https://spacy.io/}, we lemmatized each word to produce a root word. Both the root
+word token and the original token were used as categorical features. Due to
+their high cardinality, these features were not one-hot encoded but were
+preserved in single columns and handled in this form by the model (as described
+below).
+
+Along with the tokens themselves we encoded instance word's part of speech,
+morphological features, and dependency edge label. (We noticed that some words
+in the original dataset were paired with the wrong morphological features,
+particularly near where punctuation had been removed from the sentence. To fix,
+this, we re-processed the data using Google SyntaxNet\footnote{https://github.com/ljm625/syntaxnet-rest-api}.)
+
+We also encoded word length and several word characteristics gleaned from
+external data sources. \hl{PAM AND DAVID FILL IN HERE WITH FREQ, LEVENSHTEIN, AND
+AOA}.
+
+\subsubsection{User features}
+
+Just as we did for word tokens, we encoded the user ID as a single-column,
+high-cardinality feature. We also calculated several other user-level features.
+\hl{TODD AND ANSELM HERE}
+
+\subsubsection{Positional features}
+
+To account for the effects of surrounding words on the difficulty of an
+instance, we created several features related to the instance word's context in
+the exercise. These included the token of the previous word, the next word, and
+the instance word's root in the parse tree, all stored in single columns as with
+the instance token itself. We also included the part of speech of each of these
+context words as additional features. When there was no previous word, next word, or parse
+root word, a special {\tt None} token or {\tt None} part of speech was used.
+
+\subsubsection{Temporal features}
+
+A user's probability of succeeding on an instance is likely related to their
+prior experience with that instance. To capture this, we calculated several
+features related to past experience. We encoded the number of times the
+current exercise's exact sentence had been seen before by the user. \hl{is this
+  right Todd?} We also encoded a set of features recording past experience with
+the particular instance word. These features were encoded separately for the
+instance token and for the instance root word created by lemmatization.
+
+For each token (and root) we tracked user performance through four weighted
+error averages. At the user's first encounter of the token, each error term $E$ starts at
+zero. After an encounter with an instance of the token with label $L$, it is
+updated according to the equation
+
+\[
+E \leftarrow E + \alpha (L - E)
+\]
+
+where $\alpha$ determines the speed of error updating. The four feature weighted
+error terms use $\alpha = \{.3, .1, .03, .01\}$, allowing both short-run and
+long-run changes in a user's error rate with a token to be tracked. Note that in
+cases where a token appears multiple times in an exercise, a single update of
+the error features is conducted using the mean of the token labels.
+Along with the error tracking features, for each token we calculated the number
+of labeled, unlabeled, and total encounters; time since last labeled encounter and
+last encounter; and whether the instance is the first encounter with the
+token.
+
+In the training data, all instances are labeled as correct or incorrect, so the
+label for the previous encounter is always available. In the test data, labels
+are unavailable, so predictions must be made using a mix of labeled and
+unlabeled past encounters. To generate training-set features that are 
+comparable to test-set features, we selectively ignored some labels when encoding temporal features on
+the training set. Specifically, for each user we first calculated the number of
+exercises $n$ in the true test set. Then, when encoding the features for each
+instance, we selected a random integer $r$ in the range $[1,n]$, and ignored labels
+in the prior $r$ exercises. That is, we encode features for the current instance
+as though other instances in those prior exercises were unlabeled, and ignore
+updates to the error averages from those exercises. The result of this process
+is that each instance in the training set is encoded as though it were between
+one and $n$ exercises into the test set.
+
+\subsection{Modeling}
+
+\section{Feature Removal Experiments}
+
+\bibliography{paper}
+\bibliographystyle{acl_natbib}
+
+\end{document}
