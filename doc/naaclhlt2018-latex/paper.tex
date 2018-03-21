@@ -149,6 +149,67 @@ one and $n$ exercises into the test set.
 
 \subsection{Modeling}
 
+After featurizing the training data, we trained gradient boosting decision
+tree (GBDT) models to minimize log loss. GBDT works by
+iteratively building regression trees, each of which seeks to minimize the
+residual loss from prior trees. This allows it to capture non-linear effects
+and high-order interactions among features. We used the LightGBM\footnote{http://lightgbm.readthedocs.io/} implementation
+of GBDT \cite{ke2017lightgbm}.
+
+For continuous-valued features, GBDT can split a leaf at any point, creating
+different predicted values above and below that threshold. For categories that
+are one-hot encoded, it can split a leaf on any of the category's features. This
+means that for a category with thousands of values, potentially thousands of
+tree splits would be needed to capture its relation to the target. Fortunately,
+LightGBM implements an algorithm for partitioning the values of a categorical
+feature into two groups based on their relevence to the current loss, and create
+a single split to divide those groups \cite{fisher1958grouping}. Thus, as
+alluded to above, high-cardinality features like token and user were encoded as
+single columns and handled as categories by LightGBM.
+
+We trained a model for each of the three language tracks of {\tt en\_es}, {\tt es\_en},
+and {\tt fr\_en}, and also trained a model on the combined data from
+all three tracks, adding an additional ``language'' feature. Following model
+training, we averaged the predictions of each single-language model with that of
+the all-language model to form our final predictions.
+
+To tune model hyper-parameters and evaluate the usefulness of features, we first
+trained the models on the ``train'' data set and evaluated them on the ``dev''
+data set. Once the model structure was finalized, we trained on the combined
+``train'' and ``dev'' data and produced predictions for the ``test'' data. The
+LightGBM hyperparameters used for each model are listed in Table~\ref{lightgbm-params}.
+
+
+\begin{table}[t!]
+\begin{center}
+\begin{tabular}{|l|llll|}
+  % \hline   & \multicolumn{3}{l}{\bf Value} & \\
+  \hline \bf Parameter & {\tt fr\_en} & {\tt en\_es} & {\tt es\_en} & {\tt all} \\ \hline
+  num\_leaves & 256 & 512 & 512 & 1024 \\
+  learning\_rate & .05 & .05 & .05 & .05 \\
+  min\_data\_in\_leaf & 100 & 100 & 100 & 100 \\
+  num\_boost\_rounds & 750 & 650 & 600 & 750 \\
+  cat\_smooth & 200 & 200 & 200& 200 \\
+  feature\_fraction & .7 & .7 & .7 & .7 \\
+  max\_cat\_threshold & 32 & 32 & 32& 64 \\
+
+\hline
+\end{tabular}
+\end{center}
+\caption{\label{lightgbm-params} Parameters of final LightGBM models. See
+  LightGBM documentation for more information; all other parameters were left at
+their default values.}
+\end{table}
+
+\subsection{Performance}
+
+The AUROC of our final predictions was $.8585$ on {\tt en\_es}, $.8350$ on {\tt
+  es\_en}, and $.8540$ on {\tt fr\_en}. We did not attempt to optimize the model's
+F1 score, but the model's F1 score could likely be improved (at the cost of
+increased log loss) by finding the
+rescaling of the ``dev'' predicted probabilities that maximized the F1 score at
+the 0.5 threshold, and applying this rescaling to the ``test'' predicted probabilities.
+
 \section{Feature Removal Experiments}
 
 \bibliography{paper}
