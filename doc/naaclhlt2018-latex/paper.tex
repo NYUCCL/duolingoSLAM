@@ -30,7 +30,7 @@
 
 \newcommand\BibTeX{B{\sc ib}\TeX}
 
-\title{Title: Something snappy about the SLAM competition}
+\title{Modeling Second-Language Learning from a Psychological Perspective}
 
 
 \author{Alexander S. Rich\qquad Pamela Osborn Popp\qquad David J. Halpern\\
@@ -43,12 +43,54 @@
 \begin{document}
 \maketitle
 \begin{abstract}
+This is the abstract
 \end{abstract}
 
 \section{Introduction}
 
-Blah Blah \cite{slam18}
+Educational software that aims to teach people new skills, languages, and
+even academic subjects have become increasingly popular.  The wide-spread
+deployment of these tools has created interesting opportunities to study
+the process of learning in extremely large samples of learners in naturalistic
+situations. The Duolingo shared task on Second Lanugage Acquisition Modeling (SLAM)
+was a competitive modeling challenge run in early 2018~\cite{slam18}.
+The challenge, organized by Duolingo\footnote{http://duolingo.com}, a popular second
+language learning app, was
+to use log data from thousand of users completing millions of exercises 
+predict patterns of future translation mistakes in held-out data.  The data set was
+divided into three sets covering students learning to translate English to Spanish (ES$\to$EN),
+Spanish to English (ES$\to$EN), and French to English (FR$\to$EN).
+This paper reports the approach used by our team which ended in third place 
+for the ES$\to$EN data set, second place for the ES$\to$EN data set, and third place
+for FR$\to$EN.
 
+Our lab's interest in this competition comes from our emphasis on studying human learning
+and memory from a psychological perspective.  While the Duolingo SLAM dataset 
+heavily emphasizes language learning (e.g., syntax, grammar, semantics), it also touches on
+basic learning and memory phenomena (e.g., retrieval of the translated
+word from memory).  The study of the psychological processes supporting second-language 
+acquisition has long been a topic of interest in the learning and memory literature~\cite[e.g.,]{Atkinson:1972rm,Atkinson:1972rz,Pavlik:2008rm}.
+In fact, much of the classic work on psychology of memory involved aspects of verbal
+language learning, which helped to identify a number of important and robust phenomena
+in memory including the retention curve and the advantage for spaced
+over massed practice~\cite{Ruth:1928aa,Rubin:1996aa,Cepeda:2006aa}.
+
+\hl{ Todd: I want to transition to something about how our approach tried to stick to some
+psychological principles but i'm not sure... maybe need to wait until al the later sections
+are fleshed out to lay out what the "concept" is behind our approach}.
+
+\hl{One idea is to talk about while the research on learnign and memory is important
+it might be hard to graft those principles into datasets like these because of 
+subject variability, etc... As a result it is unlikely that straightfoward
+cognitive models will work but instead need to combine maching learning methods
+that can create much more complex rules and decisions with features that reflect
+aspects of what makes something easy or hard to learn.}
+
+
+\cite{Tubridy:2018aa}
+\cite{Tubridy:2018ab}
+\cite{Corbett1995bkt}
+\cite{Roediger2006te,Anderson1994rif,Mozer:2009cs}
 \section{Task Approach}
 
 We approached the task as a binary classification problem over instances (i.e.,
@@ -108,10 +150,13 @@ root word, a special {\tt None} token or {\tt None} part of speech was used.
 A user's probability of succeeding on an instance is likely related to their
 prior experience with that instance. To capture this, we calculated several
 features related to past experience. We encoded the number of times the
-current exercise's exact sentence had been seen before by the user. \hl{is this
-  right Todd?} We also encoded a set of features recording past experience with
+current exercise's exact sentence had been seen before by the user. 
+We also encoded a set of features recording past experience with
 the particular instance word. These features were encoded separately for the
 instance token and for the instance root word created by lemmatization.
+\cite{Perruchet:1998nw,Chun:1999gt} \hl{chun is good, maybe something other
+that PARSER as it is more a statistcal learning model}
+
 
 For each token (and root) we tracked user performance through four weighted
 error averages. At the user's first encounter of the token, each error term $E$ starts at
@@ -210,6 +255,10 @@ rescaling of the ``dev'' predicted probabilities that maximized the F1 score at
 the 0.5 threshold, and applying this rescaling to the ``test'' predicted probabilities.
 
 \section{Feature Removal Experiments}
+
+\section{Acknowledgments}
+This research was supported by NSF grant DRL-1631436 and
+seed funds from the NYU Dean for Science.
 
 \bibliography{paper}
 \bibliographystyle{acl_natbib}
