@@ -131,15 +131,14 @@ external data sources. The word frequency effect suggests that uncommon words ar
 \subsubsection{User features}
 
 Just as we did for word tokens, we encoded the user ID as a single-column,
-high-cardinality feature. We also calculated several other user-level features.
+high-cardinality feature. We also calculated several other user-level features that related to the ``learning type'' of a user. In particular, we encoded features to estimate the long-term motivation and diligence of a user. These features could help predict how users interact with old and novel words they encounter.
 
-\hl{ANSELM HERE}
+%Feature 1: Motivation %compute_motivation
+To estimate users' motivation we grouped their exercises into ``bursts.'' Bursts were separated by at least 24 hours.  We used three concrete features about these bursts, namely the mean and median number of exercises within bursts as well as the total number of bursts of a given user. Users that were more motivated had potentially bursts with more exercises. Simultaneously, a larger total number of bursts indicated that the burst length estimate was more trustworthy.
 
-Feature 1: Motivation %compute_motivation
+%Feature 2: Consistency %compute_usage_entropy
 
-Feature 2: Consistency %compute_usage_entropy
-
-
+To estimate users' diligence we speculated that a very diligent user might be using the app regularly at the same time of day, perhaps following a study schedule, compared to a less diligent user whose times might vary a lot. The data set did not provide a variable with the time of day, which would have been an interesting feature on its own. Instead, we were able to extract for each exercise the time of day relative to the first time a user had used the app, ranging from 0 to 1 (with 0 indicating the same time, 0.25 indicating a relative shift by 6 hours, etc.).  We then discretized this variable into 20-minute bins and computed the entropy of the empirical frequency distribution over these bins. A lower entropy score indicated less variability in the times of day a user started their exercises.
 
 \subsubsection{Positional features}
 
