@@ -48,6 +48,25 @@ elif lesion_type == 'external':
     for d in train_x + test_x:
         for key in remove:
             d.pop(key)
+elif lesion_type == 'user':
+    cat_features = ['token', 'root',
+                    'prev_token', 'next_token', 'parseroot_token']
+    remove = ['user', 'entropy', 'burst_length', 'mean_burst_duration', 'median_burst_duration']
+    for d in train_x + test_x:
+        for key in remove:
+            d.pop(key)
+elif lesion_type == 'temporal':
+    cat_features = ['token', 'root', 'user',
+                    'prev_token', 'next_token', 'parseroot_token']
+    key_starters = ['token:', 'root:']
+    key_enders = ['encounters', 'time_since_last_encounter', 'time_since_last_label',
+                  'encounters_lab', 'encounters_unlab', 'first_encounter',
+                  'erravg0', 'erravg1', 'erravg2', 'erravg3']
+    for d in train_x + test_x:
+        for s in key_starters:
+            for e in key_enders:
+                d.pop(s+e, None)
+
 else:
     print('Unknown lesion type')
     sys.exit()
