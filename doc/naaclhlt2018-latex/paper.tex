@@ -15,6 +15,7 @@
 \usepackage[hyperref]{naaclhlt2018}
 \usepackage{times}
 \usepackage{latexsym}
+\usepackage{graphicx}
 \usepackage{soul}
 
 \usepackage{url}
@@ -144,9 +145,9 @@ To estimate users' diligence we speculated that a very diligent user might be us
 To account for the effects of surrounding words on the difficulty of an
 instance, we created several features related to the instance word's context in
 the exercise. These included the token of the previous word, the next word, and
-the instance word's root in the parse tree, all stored in single columns as with
+the instance word's root in the dependency tree, all stored in single columns as with
 the instance token itself. We also included the part of speech of each of these
-context words as additional features. When there was no previous word, next word, or parse
+context words as additional features. When there was no previous word, next word, or dependency-tree
 root word, a special {\tt None} token or {\tt None} part of speech was used.
 
 \subsubsection{Temporal features}
@@ -197,6 +198,27 @@ one and $n$ exercises into the test set.
 
 \subsection{Modeling}
 
+\begin{table}[t!]
+\small
+\begin{center}
+\begin{tabular}{|l|llll|}
+  % \hline   & \multicolumn{3}{l}{\bf Value} & \\
+  \hline \bf Parameter & {\tt fr\_en} & {\tt en\_es} & {\tt es\_en} & {\tt all} \\ \hline
+  num\_leaves & 256 & 512 & 512 & 1024 \\
+  learning\_rate & .05 & .05 & .05 & .05 \\
+  min\_data\_in\_leaf & 100 & 100 & 100 & 100 \\
+  num\_boost\_rounds & 750 & 650 & 600 & 750 \\
+  cat\_smooth & 200 & 200 & 200& 200 \\
+  feature\_fraction & .7 & .7 & .7 & .7 \\
+  max\_cat\_threshold & 32 & 32 & 32& 64 \\
+\hline
+\end{tabular}
+\end{center}
+\caption{\label{lightgbm-params} Parameters of final LightGBM models. See
+  LightGBM documentation for more information; all other parameters were left at
+their default values.}
+\end{table}
+
 After featurizing the training data, we trained gradient boosting decision
 tree (GBDT) models to minimize log loss. GBDT works by
 iteratively building regression trees, each of which seeks to minimize the
@@ -228,38 +250,60 @@ data set. Once the model structure was finalized, we trained on the combined
 LightGBM hyperparameters used for each model are listed in Table~\ref{lightgbm-params}.
 
 
-\begin{table}[t!]
-\small
-\begin{center}
-\begin{tabular}{|l|llll|}
-  % \hline   & \multicolumn{3}{l}{\bf Value} & \\
-  \hline \bf Parameter & {\tt fr\_en} & {\tt en\_es} & {\tt es\_en} & {\tt all} \\ \hline
-  num\_leaves & 256 & 512 & 512 & 1024 \\
-  learning\_rate & .05 & .05 & .05 & .05 \\
-  min\_data\_in\_leaf & 100 & 100 & 100 & 100 \\
-  num\_boost\_rounds & 750 & 650 & 600 & 750 \\
-  cat\_smooth & 200 & 200 & 200& 200 \\
-  feature\_fraction & .7 & .7 & .7 & .7 \\
-  max\_cat\_threshold & 32 & 32 & 32& 64 \\
-
-\hline
-\end{tabular}
-\end{center}
-\caption{\label{lightgbm-params} Parameters of final LightGBM models. See
-  LightGBM documentation for more information; all other parameters were left at
-their default values.}
-\end{table}
 
 \subsection{Performance}
 
 The AUROC of our final predictions was $.8585$ on {\tt en\_es}, $.8350$ on {\tt
   es\_en}, and $.8540$ on {\tt fr\_en}. We did not attempt to optimize the model's
-F1 score, but the model's F1 score could likely be improved (at the cost of
+F1 score, but the F1 score could likely be improved (at the cost of
 increased log loss) by finding the
 rescaling of the ``dev'' predicted probabilities that maximized the F1 score at
 the 0.5 threshold, and applying this rescaling to the ``test'' predicted probabilities.
 
 \section{Feature Removal Experiments}
+
+\begin{figure*}[htp]
+% \centering
+\includegraphics[width=\textwidth]{lesions.pdf}
+\caption{Performance on {\tt dev} of models trained on all {\tt train} data,
+  with different groups of lesioned features. See main text for description of
+  lesion groups}
+\label{fig:lesions}
+\end{figure*}
+
+
+To better understand which features or groups of features were most important to
+our model's predictions, we conducted a set of experiments in which we lesioned
+(i.e., removed) a group of features and re-trained the model on the {\tt train}
+set, evaluating performance on the {\tt dev} set. For simplicity, we ran each of the
+lesioned models on all language data and report the average
+performance. We did not run individual-language models as we did for our primary model.
+
+The results of the lesion experiments are shown in Figure~\ref{fig:lesions}. The
+models are as follows.
+\begin{itemize}
+  \item \emph{none}: all features are included.  
+  \item \emph{user}: all user-level features, including the user ID and other
+    calculated features like entropy and measures of exercise bursts, are
+    removed.
+  \item \emph{userid} and \emph{user other}: only user ID or only the calculated
+    features user features, respectively, are removed.
+  \item \emph{word}: Token and token root IDs; previous, next, and dependency-tree
+    root word IDs; and morphological, part of speech, and dependency tree
+    features are removed.
+  \item \emph{word id} and \emph{word other}: only word IDs or only other
+    word features, respectively, are removed.
+  \item \emph{neighbors}: Both word IDs and other word features are removed, but
+    only for the previous, next, and dependency-tree root words. Information
+    about the present word is maintained.
+  \item \emph{external}: External information about the word, including corpus
+    frequency, Levenshtein distance from translation, and age of acquisition,
+    are removed.
+  \item \emph{temporal}: Temporal information, including number and timing of
+    past encounters with the word and error tracking information, is removed.
+\end{itemize}
+
+
 
 \section{Acknowledgments}
 This research was supported by NSF grant DRL-1631436 and
