@@ -40,6 +40,46 @@ elif lesion_type == 'neighbors':
                 d.pop(key)
             if '_pos:' in key:
                 d.pop(key)
+
+elif lesion_type == 'word':
+    print('lesioning word feats')
+    cat_features = ['user']
+    remove = ['token', 'root', 'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        keys = [key for key in d]
+        for key in keys:
+            if '_pos:' in key:
+                d.pop(key)
+            elif 'morphological_feature' in key:
+                d.pop(key)
+            elif 'dependency_label' in key:
+                d.pop(key)
+            elif 'part_of_speech' in key:
+                d.pop(key)
+            elif key in remove:
+                d.pop(key)
+elif lesion_type == 'word_ids':
+    print('lesioning word ids')
+    cat_features = ['user']
+    remove = ['token', 'root', 'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        for key in remove:
+            d.pop(key, None)
+elif lesion_type == 'word_otherfeats':
+    print('lesioning non-id word features')
+    cat_features = ['token', 'root', 'user',
+                    'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        keys = [key for key in d]
+        for key in keys:
+            if '_pos:' in key:
+                d.pop(key)
+            elif 'morphological_feature' in key:
+                d.pop(key)
+            elif 'dependency_label' in key:
+                d.pop(key)
+            elif 'part_of_speech' in key:
+                d.pop(key)
 elif lesion_type == 'external':
     print('lesioning external word features')
     cat_features = ['token', 'root', 'user',
@@ -47,15 +87,31 @@ elif lesion_type == 'external':
     remove = ['frequency', 'levenshtein', 'leven_frac', 'aoa']
     for d in train_x + test_x:
         for key in remove:
-            d.pop(key)
+            d.pop(key, None)
 elif lesion_type == 'user':
+    print('lesioning user features')
     cat_features = ['token', 'root',
                     'prev_token', 'next_token', 'parseroot_token']
     remove = ['user', 'entropy', 'burst_length', 'mean_burst_duration', 'median_burst_duration']
     for d in train_x + test_x:
         for key in remove:
             d.pop(key)
+elif lesion_type == 'user_id':
+    print('lesioning user id')
+    cat_features = ['token', 'root',
+                    'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        d.pop('user')
+elif lesion_type == 'user_otherfeats':
+    print('lesioning user other features')
+    cat_features = ['token', 'root', 'user',
+                    'prev_token', 'next_token', 'parseroot_token']
+    remove = ['entropy', 'burst_length', 'mean_burst_duration', 'median_burst_duration']
+    for d in train_x + test_x:
+        for key in remove:
+            d.pop(key)
 elif lesion_type == 'temporal':
+    print('lesioning temporal features')
     cat_features = ['token', 'root', 'user',
                     'prev_token', 'next_token', 'parseroot_token']
     key_starters = ['token:', 'root:']
@@ -66,7 +122,38 @@ elif lesion_type == 'temporal':
         for s in key_starters:
             for e in key_enders:
                 d.pop(s+e, None)
-
+elif lesion_type == 'ids':
+    print('lesioning ids')
+    cat_features = []
+    remove = ['token', 'root', 'user',
+                    'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        for key in remove:
+            d.pop(key, None)
+elif lesion_type == 'nonids':
+    print('lesioning all but ids')
+    cat_features = ['token', 'root', 'user',
+                    'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        keys = [key for key in d]
+        for key in keys:
+            if key not in cat_features:
+                d.pop(key)
+elif lesion_type == 'exercise':
+    print('lesioning exercise features')
+    cat_features = ['token', 'root', 'user',
+                    'prev_token', 'next_token', 'parseroot_token']
+    for d in train_x + test_x:
+        keys = [key for key in d]
+        for key in keys:
+            if 'client' in key:
+                d.pop(key)
+            elif 'format' in key:
+                d.pop(key)
+            elif 'session' in key:
+                d.pop(key)
+            elif key == 'time':
+                d.pop(key)
 else:
     print('Unknown lesion type')
     sys.exit()
