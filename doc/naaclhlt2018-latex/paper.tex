@@ -281,28 +281,57 @@ performance. We did not run individual-language models as we did for our primary
 
 The results of the lesion experiments are shown in Figure~\ref{fig:lesions}. The
 models are as follows.
-\begin{itemize}
-  \item \emph{none}: all features are included.  
-  \item \emph{user}: all user-level features, including the user ID and other
+\begin{description}
+  \item[none:] all features are included.  
+  \item[user:] all user-level features, including the user ID and other
     calculated features like entropy and measures of exercise bursts, are
     removed.
-  \item \emph{userid} and \emph{user other}: only user ID or only the calculated
+  \item[userid \& user other:] only user ID or only the calculated
     features user features, respectively, are removed.
-  \item \emph{word}: Token and token root IDs; previous, next, and dependency-tree
+  \item[word:] Token and token root IDs; previous, next, and dependency-tree
     root word IDs; and morphological, part of speech, and dependency tree
     features are removed.
-  \item \emph{word id} and \emph{word other}: only word IDs or only other
+  \item[word id \& word other:] only word IDs or only other
     word features, respectively, are removed.
-  \item \emph{neighbors}: Both word IDs and other word features are removed, but
+  \item[neighbors:] Both word IDs and other word features are removed, but
     only for the previous, next, and dependency-tree root words. Information
     about the present word is maintained.
-  \item \emph{external}: External information about the word, including corpus
+  \item[external:] External information about the word, including corpus
     frequency, Levenshtein distance from translation, and age of acquisition,
     are removed.
-  \item \emph{temporal}: Temporal information, including number and timing of
+  \item[temporal:] Temporal information, including number and timing of
     past encounters with the word and error tracking information, is removed.
-\end{itemize}
+\end{description}
 
+Interestingly, we found that for both user-level and word-level features, the
+bulk of the model's predictive power could be achieved using ID's alone,
+represented as high-cardinality categorical features. Removing other word features,
+such as morphological features and part of speech, created only a small
+degradation of performance. In the case of users, removing features such as
+entropy and average exercise burst length led to a tiny increase of performance.
+In the case of both users and words, though, we find that in the absence of ID
+features the other features are helpful and leads to better performance than
+removing all features. We also found that removing all information about
+neighboring words and the dependency-parse root word degraded performance. This
+confirms that word context matters, and likely points to errors in word order,
+subject--verb matching and other grammatical rules.
+
+Our external word features---Levenshtein distance to translation, frequency, and
+age of acquisition---provided a slight boost to model performance, showing the
+benefit of considering from a psychological and linguistic perspective what
+makes a word hard to learn. Adding temporal features about past encounters and
+errors helped the models, but not as much as we expected. While not included in
+the final model, we had also tried augmenting the temporal feature set with more
+features related to massing and spacing of encounters with a word, but found it
+did not improve performance. This is perhaps not surprising given how small the
+benefit of the existing temporal features are in our model.
+
+While not plotted above, we also ran a model lesioning exercise-level features
+including client, session type, format, and exercise duration. This model
+achieved an AUROC of $.787$, far lower than any other lesion. This points to the
+importance of how a question is asked for user performance, reflecting insights
+from psychology such as the difference between recall and recognition memory
+\cite{yonelinas2002nature}.
 
 
 \section{Acknowledgments}
