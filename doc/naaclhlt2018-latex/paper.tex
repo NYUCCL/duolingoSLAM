@@ -333,6 +333,43 @@ importance of how a question is asked for user performance, reflecting insights
 from psychology such as the difference between recall and recognition memory
 \cite{yonelinas2002nature}.
 
+\section{Discussion}
+
+When approaching the Duolingo SLAM task, we hoped to leverage psychological
+insights in building our model. We found that in some cases, such as the
+age of acquisition, this was helpful. In general, though, our model gained its
+power not from hand-crafted features but from applying a powerful inference
+technique (gradient boosted trees) to raw input about user and word IDs and
+exercise features.
+
+There are multiple reasons for the limited applicability of psychology to this
+competition. First, computational psychological models, while useful, are not
+well-suited to generating highly accurate predictions from large data sets.
+Because they are designed not for prediction but for explanation, they tend to
+use a small number of input variables and to allow those variables to interact
+in limited ways. In contrast, gradient boosted trees, as well as other
+cutting-edge techniques like deep learning. can extract high-level
+interactions among hundreds of features. Though they are highly opaque, require
+a lot of data, and are not amenable to explanation, these models excel at prediction.
+
+Second, it is possible that our ability to use theories of learning, including
+ideas about massed and spaced practice, was disrupted by the fact that the data
+may have been adaptively created using these very principles
+\cite{settles2016trainable}. If Duolingo adaptively sequenced the spacing of
+trials based on past errors, then the relationship between future errors and
+past spacing may have differed from that found in the psychological literature
+\cite{Cepeda:2006aa}.
+
+Finally, a task in which more true generalization was required might have
+allowed psychologically inspired features to perform more competitively. In this
+task, there is a large amount of labeled training data for every user and for
+most words. This allow simple ID-based features to work. However, for a
+newly-encountered user or word, an ID is useless. Theory-driven features, in
+contrast, can generalize to new settings. Thus, if we were asked to generalize to
+a completely new language such as German, many parts of our model would falter
+but word frequency, age of acquisition, and Levenshtein distance to
+first-language translation would still likely be predictive.
+
 
 \section{Acknowledgments}
 This research was supported by NSF grant DRL-1631436 and
