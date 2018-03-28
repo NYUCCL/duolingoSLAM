@@ -34,7 +34,7 @@
 \title{Modeling Second-Language Learning from a Psychological Perspective}
 
 
-\author{Alexander S. Rich\qquad Pamela Osborn Popp\qquad David J. Halpern\\
+\author{Alexander S. Rich\qquad Pamela J. Osborn Popp\qquad David J. Halpern\\
   \textbf{Anselm Rothe\qquad Todd M. Gureckis} \\
   Department of Psychology, New York University \\
   {\tt \{asr443,pamop,david.halpern,anselm,todd.gureckis\}@nyu.edu} \\}
@@ -57,7 +57,7 @@ situations. The Duolingo shared task on Second Lanugage Acquisition Modeling (SL
 was a competitive modeling challenge run in early 2018~\cite{slam18}.
 The challenge, organized by Duolingo\footnote{http://duolingo.com}, a popular second
 language learning app, was
-to use log data from thousand of users completing millions of exercises 
+to use log data from thousands of users completing millions of exercises to 
 predict patterns of future translation mistakes in held-out data.  The data set was
 divided into three sets covering Spanish speakers learning English ({\tt en\_es}),
 English speakers learning Spanish ({\tt es\_en}), and English speakers learning
@@ -72,7 +72,7 @@ heavily emphasizes language learning (e.g., syntax, grammar, semantics), it also
 basic learning and memory phenomena (e.g., retrieval of the translated
 word from memory).  The study of the psychological processes supporting second-language 
 acquisition has long been a topic of interest in the learning and memory literature~\cite[e.g.,]{Atkinson:1972rm,Atkinson:1972rz,Pavlik:2008rm}.
-In fact, much of the classic work on psychology of memory involved aspects of verbal
+In fact, much of the classic work on the psychology of memory involved aspects of verbal
 language learning, which helped to identify a number of important and robust phenomena
 in memory including the retention curve and the advantage for spaced
 over massed practice~\cite{Ruth:1928aa,Rubin:1996aa,Cepeda:2006aa}.
@@ -121,7 +121,7 @@ their high cardinality, these features were not one-hot encoded but were
 preserved in single columns and handled in this form by the model (as described
 below).
 
-Along with the tokens themselves we encoded \hl{each} instance word's part of speech,
+Along with the tokens themselves we encoded each instance word's part of speech,
 morphological features, and dependency edge label. (We noticed that some words
 in the original dataset were paired with the wrong morphological features,
 particularly near where punctuation had been removed from the sentence. To fix
@@ -129,6 +129,7 @@ this, we re-processed the data using Google SyntaxNet\footnote{https://github.co
 
 We also encoded word length and several word characteristics gleaned from
 external data sources. The word frequency effect suggests that uncommon words are harder to process than common words; readers will look longer at low-frequency words and perform worse in word-identification tasks for these than for high-frequency words \cite{rayner1998eye}. We therefore included a feature that encoded the frequency of each word in the language being acquired, calculated from \citet{robert_speer_2017_998161}. A number of studies have also shown that age-of-acquisition is another strong predictor of word processing and lexical retrieval difficulty that is somewhat independent of word frequency \cite{brysbaert2011effects, ferrand2011comparing}. We therefore included mean age-of-acquisition (in English) as a feature, derived from published age-of-acquisition norms for 30,000 English words from \cite{Kuperman2012} which covered many of the words present in the dataset. Additionally, cognates, or words sharing a common linguistic derivation, are easier to learn than words with dissimilar translations \cite{de2000hard}. As an approximate measure of linguistic similarity, we used the Levenshtein edit distance between the word tokens and their translations scaled by the length of the longer word. We found translations using Google Translate\footnote{https://cloud.google.com/translate/} and calculated the Levenshtein distance to reflect the letter-by-letter similarity of the word and its translation \cite{hyyro2001explaining}. 
+
 \subsubsection{User features}
 
 Just as we did for word tokens, we encoded the user ID as a single-column,
@@ -139,7 +140,7 @@ To estimate users' motivation we grouped their exercises into ``bursts.'' Bursts
 
 %Feature 2: Consistency %compute_usage_entropy
 
-To estimate users' diligence we speculated that a very diligent user might be using the app regularly at the same time of day, perhaps following a study schedule, compared to a less diligent user whose times might vary a lot. The data set did not provide a variable with the time of day, which would have been an interesting feature on its own. Instead, we were able to extract for each exercise the time of day relative to the first time a user had used the app, ranging from 0 to 1 (with 0 indicating the same time, 0.25 indicating a relative shift by 6 hours, etc.).  We then discretized this variable into 20-minute bins and computed the entropy of the empirical frequency distribution over these bins. A lower entropy score indicated less variability in the times of day a user started their exercises.
+To estimate users' diligence\hl{consistency?} we speculated that a very diligent user might be using the app regularly at the same time of day, perhaps following a study schedule, compared to a less diligent user whose schedule might vary more. The data set did not provide a variable with the time of day, which would have been an interesting feature on its own. Instead, we were able to extract for each exercise the time of day relative to the first time a user had used the app, ranging from 0 to 1 (with 0 indicating the same time, 0.25 indicating a relative shift by 6 hours, etc.).  We then discretized this variable into 20-minute bins and computed the entropy of the empirical frequency distribution over these bins. A lower entropy score indicated less variability in the times of day a user started their exercises.
 
 \subsubsection{Positional features}
 
@@ -314,7 +315,7 @@ In the case of both users and words, though, we find that in the absence of ID
 features the other features are helpful and leads to better performance than
 removing all features. We also found that removing all information about
 neighboring words and the dependency-parse root word degraded performance. This
-confirms that word context matters, and likely points to errors in word order,
+confirms that word context matters, and suggests that users commonly make errors in word order,
 subject--verb matching and other grammatical rules.
 
 Our external word features---Levenshtein distance to translation, frequency, and
@@ -347,7 +348,7 @@ There are multiple reasons for the limited applicability of psychology to this
 competition. First, computational psychological models, while useful, are not
 well-suited to generating highly accurate predictions from large data sets.
 Because they are designed not for prediction but for explanation, they tend to
-use a small number of input variables and to allow those variables to interact
+use a small number of input variables and allow those variables to interact
 in limited ways. In contrast, gradient boosted trees, as well as other
 cutting-edge techniques like deep learning. can extract high-level
 interactions among hundreds of features. Though they are highly opaque, require
