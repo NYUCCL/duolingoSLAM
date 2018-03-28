@@ -99,17 +99,20 @@ the predictive accuracy of psychological theories in a more generalizable fashio
 
 Despite these promising opportunities, it remains unclear how much of current psychological
 theory might be important for tasks such as the Duolingo SLAM challenge.
-As one example, the field of education data mining which has attempted to build
-predictive models of student learning have found excellent results using
-deep neural networks~\cite[so called ``deep knowledge tracing",][]{Piech:2015aa} 
-as opposed to more traditional, and interpretable, models and approaches
-that are rooted in cognitive science~\cite[e.g.,][]{Atkinson:1972rm,Atkinson:1972rz,Corbett1995bkt,Pavlik:2008rm}. Recently, Khajah, Lindsey, \& Mozer (2016) compared deep knowledge tracing (DKT) to a more
+In the field of education data mining, researchers trying to build
+predictive models of student learning have typically relied on traditional, and interpretable, models and approaches
+that are rooted in cognitive science~\cite[e.g.,][]{Atkinson:1972rm,Atkinson:1972rz,Corbett1995bkt,Pavlik:2008rm}.
+However, a recent paper found that state-of-the-art results could be achieved using deep neural networks with
+little or no cognitive theory built in~\cite[so called ``deep knowledge tracing",][]{Piech:2015aa} 
+In response, a number of papers such as Khajah, Lindsey, \& Mozer (2016) compared deep knowledge tracing (DKT) to more
 standard ``Bayesian knowledge tracing" (BKT) models and showed
 that it was possible to equate the performance of the the BKT model by additional 
 features and parameters that represent core aspects of the psychology of learning
-and memory such as forgetting~\cite{Khajah2016hdnt}.
+and memory such as forgetting and individual abilities~\cite{Khajah2016hdnt}. An ongoing debate remains in this community 
+whether using flexible models with lots of data can improve over more heavily structured, theory-based models \cite{Tang:2016:DNN, xiong2016going, zhang2017incorporating}.
 
-Our entry to SLAM borrowed conceptually from the Khajah et al. (2016) approach. 
+We positioned our entry to SLAM somewhat in between the above mentioned approaches by using 
+psychologically inspired features in a fairly flexible model. 
 Specifically we used a relatively well known and powerful classification
 algorithm: gradient boosting decision trees~\cite[GBDT][]{ke2017lightgbm}.  Like
 deep learning, this algorithm can extract complex interactions among features,
@@ -158,16 +161,15 @@ particularly near where punctuation had been removed from the sentence. To fix
 this, we re-processed the data using Google SyntaxNet\footnote{https://github.com/ljm625/syntaxnet-rest-api}.)
 
 We also encoded word length and several word characteristics gleaned from
-external data sources. Past research has suggested some features of words that determine how hard words are to process, as measured by how long readers look at the word and performance in lexical decision and word identification tasks. Two such features that have somewhat independent effects are word frequency (how often the word occurs in natural language) \cite{rayner1998eye} and age-of-acquisition (the age at which children typically exhibit the word in their vocabulary) \cite{brysbaert2011effects, ferrand2011comparing}. We therefore included a feature that encoded the frequency of each word in the language being acquired, calculated from \citet{robert_speer_2017_998161} and a feature that encoded mean age-of-acquisition (in English), derived from published age-of-acquisition norms for 30,000 English words \cite{Kuperman2012} which covered many of the words present in the dataset. Additionally, cognates, or words sharing a common linguistic derivation, are easier to learn than words with dissimilar translations \cite{de2000hard}. As an approximate measure of linguistic similarity, we used the Levenshtein edit distance between the word tokens and their translations scaled by the length of the longer word. We found translations using Google Translate\footnote{https://cloud.google.com/translate/} and calculated the Levenshtein distance to reflect the letter-by-letter similarity of the word and its translation \cite{hyyro2001explaining}. 
+external data sources. Past research in psychology has suggested some features of words that determine how hard the word are to process, as measured by how long readers look at the word and performance in lexical decision and word identification tasks. Two such features that have somewhat independent effects are word frequency (how often the word occurs in natural language) \cite{rayner1998eye} and age-of-acquisition (the age at which children typically exhibit the word in their vocabulary) \cite{brysbaert2011effects, ferrand2011comparing}. We therefore included a feature that encoded the frequency of each word in the language being acquired, calculated from \citet{robert_speer_2017_998161} and a feature that encoded mean age-of-acquisition (in English), derived from published age-of-acquisition norms for 30,000 English words \cite{Kuperman2012} which covered many of the words present in the dataset. Additionally, cognates, or words sharing a common linguistic derivation, are easier to learn than words with dissimilar translations \cite{de2000hard}. As an approximate measure of linguistic similarity, we used the Levenshtein edit distance between the word tokens and their translations scaled by the length of the longer word. We found translations using Google Translate\footnote{https://cloud.google.com/translate/} and calculated the Levenshtein distance to reflect the letter-by-letter similarity of the word and its translation \cite{hyyro2001explaining}. 
 
 \subsubsection{User features}
 
 Just as we did for word tokens, we encoded the user ID as a single-column,
-high-cardinality feature. We also calculated several other user-level features that related to the ``learning type'' of a user. In particular, we encoded features that might be related to constructs such as the motivation and diligence of a user. These features could help predict how users interact with old and novel words they encounter.
+high-cardinality feature. We also calculated several other user-level features that related to the ``learning type'' of a user. In particular, we encoded features that might be related to psychological constructs such as the motivation and diligence of a user. These features could help predict how users interact with old and novel words they encounter.
 
 %Feature 1: Motivation %compute_motivation
-As a proxy for motivation, we speculated that more motivated users would complete more exercises every time they decide to use the app. To estimate this, we grouped each user's exercises into ``bursts.'' Bursts were separated by at least 24 hours \hl{todd says: did you change my code
-because bursts were separate by 1 hour in my imementation}.  We used three
+As a proxy for motivation, we speculated that more motivated users would complete more exercises every time they decide to use the app. To estimate this, we grouped each user's exercises into ``bursts.'' Bursts were separated by at least an hour.  We used three
 concrete features about these bursts, namely the mean and median number of
 exercises within bursts as well as the total number of bursts of a given user (to give the model a feature related to the uncertainty in the central tendency estimates).
 
@@ -255,7 +257,7 @@ one and $n$ exercises into the test set.
 their default values.}
 \end{table}
 
-After featurizing the training data, we trained GBDT models to minimize log loss. GBDT works by
+After generating all of the features for the training data, we trained GBDT models to minimize log loss. GBDT works by
 iteratively building regression trees, each of which seeks to minimize the
 residual loss from prior trees. This allows it to capture non-linear effects
 and high-order interactions among features. We used the LightGBM\footnote{http://lightgbm.readthedocs.io/} implementation
@@ -325,9 +327,9 @@ models are as follows.
     features user features, respectively, are removed.
   \item[word:] Token and token root IDs; previous, next, and dependency-tree
     root word IDs; and morphological, part of speech, and dependency tree
-    features are removed.
+    features are removed. This does not include {\bf external} features listed below.
   \item[word id \& word other:] only word IDs or only other
-    word features, respectively, are removed.
+    word features, respectively, are removed. {\bf word other} does not include {\bf external} features listed below.
   \item[neighbors:] Both word IDs and other word features are removed, but
     only for the previous, next, and dependency-tree root words. Information
     about the present word is maintained.
@@ -372,7 +374,7 @@ from psychology such as the difference between recall and recognition memory
 
 When approaching the Duolingo SLAM task, we hoped to leverage psychological
 insights in building our model. We found that in some cases, such as using the
-word's age of acquisition, this was helpful. In general, though, our model gained its
+word's age-of-acquisition, this was helpful. In general, though, our model gained its
 power not from hand-crafted features but from applying a powerful inference
 technique (gradient boosted decision trees) to raw input about user and word IDs and
 exercise features.
@@ -395,13 +397,13 @@ trials based on past errors, then the relationship between future errors and
 past spacing may have differed from that found in the psychological literature
 \cite{Cepeda:2006aa}.
 
-Finally, a task in which braoder generalization was required might have
+Finally, a task in which broader generalization was required might have
 allowed psychologically inspired features to perform more competitively. In this
 task, there is a large amount of labeled training data for every user and for
 most words. This allow simple ID-based features to work because the past
 history of a user will likely influence their future performance. However, for a
-newly-encountered user or word, such an ID is useless because there will be
-not relevant parameter estimate. Theory-driven features, in
+newly-encountered user or word, such an ID is useless because there will not be
+enough data to estimate the relevant parameter. Theory-driven features, in
 contrast, can often generalize to new settings because they capture more
 generic aspects of the learning task.  For example, if we were asked to generalize to
 a completely new language such as German, many parts of our model would falter
