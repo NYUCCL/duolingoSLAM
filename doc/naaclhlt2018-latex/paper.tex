@@ -30,6 +30,7 @@
 % smaller than 5cm (the original size); we will check this
 % in the camera-ready version and ask you to change it back.
 
+\hypersetup{draft}
 \newcommand\BibTeX{B{\sc ib}\TeX}
 
 \title{Modeling Second-Language Learning from a Psychological Perspective}
@@ -52,11 +53,13 @@ educational software provide opportunities to explore
 these issues from a new perspective.  In this paper we
 describe our approach to the Duolingo Second Language
 Acquisition Modeling (SLAM) competition which was run in
-early 2018.   After detailing our modeling approach and a number of
+early 2018.  We used a well-known class of algorithms (gradient boosted decision
+trees), with features partially informed by theories from the psychological
+literature. After detailing our modeling approach and a number of
 supplementary simulations, we
-reflect on which aspects of our reasonably
-successful model are substantively
-informed by findings and theories from the psychological literature.
+reflect on the degree to which psychological theory aided the model, and
+the potential for cognitive science and predictive modeling competitions to gain
+from each other.
 \end{abstract}
 
 \section{Introduction}
@@ -108,12 +111,12 @@ features and parameters that represent core aspects of the psychology of learnin
 and memory such as forgetting~\cite{Khajah2016hdnt}.
 
 Our entry to SLAM borrowed conceptually from the Khajah et al. (2016) approach.
-Specifically we started with a relatively well known and powerful classification algorithm~\cite[gradient
-boosting decision trees, GBDT,][]{ke2017lightgbm}.  This algorithm has some advantages
-over deep learning approach including the fact that the \hl{inferred decision rules are
-interpretable after the model is fit} while still being able to model relatively complex
-decision criteria.  We then created a number of new features for the SLAM
-the dataset covering aspect such as user perseverance, learning processes, 
+Specifically we used a relatively well known and powerful classification
+algorithm: gradient boosting decision trees~\cite[GBDT][]{ke2017lightgbm}.  Like
+deep learning, this algorithm can extract complex interactions among features,
+but it has some advantages including faster training and easier integration of
+diverse inputs. We then created a number of new features for the SLAM
+dataset covering aspect such as user perseverance, learning processes, 
 contextual factors, and cognate similarity.  After finding a model which provided the best
 held-out performance on the test data set, we conducted a number of ``lesioning" studies where
 we selectively removed features from the model and re-estimated the parameters in order
@@ -156,7 +159,7 @@ particularly near where punctuation had been removed from the sentence. To fix
 this, we re-processed the data using Google SyntaxNet\footnote{https://github.com/ljm625/syntaxnet-rest-api}.)
 
 We also encoded word length and several word characteristics gleaned from
-external data sources. The word frequency effect suggests that uncommon words are harder to process than common words; readers will look longer at low-frequency words and perform worse in word-identification tasks for these than for high-frequency words \cite{rayner1998eye}. We therefore included a feature that encoded the frequency of each word in the language being acquired, calculated from \citet{robert_speer_2017_998161}. A number of studies have also shown that age-of-acquisition (i.e., the age a which children typically exhibit this word in their vocabulary) is another strong predictor of word processing and lexical retrieval difficulty that is somewhat independent of word frequency \cite{brysbaert2011effects, ferrand2011comparing}. We therefore included mean age-of-acquisition (in English) as a feature, derived from published age-of-acquisition norms for 30,000 English words from \cite{Kuperman2012} which covered many of the words present in the dataset. Additionally, cognates, or words sharing a common linguistic derivation, are easier to learn than words with dissimilar translations \cite{de2000hard}. As an approximate measure of linguistic similarity, we used the Levenshtein edit distance between the word tokens and their translations scaled by the length of the longer word. We found translations using Google Translate\footnote{https://cloud.google.com/translate/} and calculated the Levenshtein distance to reflect the letter-by-letter similarity of the word and its translation \cite{hyyro2001explaining}. 
+external data sources. Past research suggests that uncommon words are harder to process than common words; readers will look longer at low-frequency words and perform worse in word-identification tasks for these than for high-frequency words \cite{rayner1998eye}. We therefore included a feature that encoded the frequency of each word in the language being acquired, calculated from \citet{robert_speer_2017_998161}. A number of studies have also shown that age-of-acquisition (i.e., the age a which children typically exhibit this word in their vocabulary) is another strong predictor of word processing and lexical retrieval difficulty that is somewhat independent of word frequency \cite{brysbaert2011effects, ferrand2011comparing}. We therefore included mean age-of-acquisition (in English) as a feature, derived from published age-of-acquisition norms for 30,000 English words from \cite{Kuperman2012} which covered many of the words present in the dataset. Additionally, cognates, or words sharing a common linguistic derivation, are easier to learn than words with dissimilar translations \cite{de2000hard}. As an approximate measure of linguistic similarity, we used the Levenshtein edit distance between the word tokens and their translations scaled by the length of the longer word. We found translations using Google Translate\footnote{https://cloud.google.com/translate/} and calculated the Levenshtein distance to reflect the letter-by-letter similarity of the word and its translation \cite{hyyro2001explaining}. 
 
 \subsubsection{User features}
 
@@ -164,7 +167,14 @@ Just as we did for word tokens, we encoded the user ID as a single-column,
 high-cardinality feature. We also calculated several other user-level features that related to the ``learning type'' of a user. In particular, we encoded features to estimate the long-term motivation and diligence of a user. These features could help predict how users interact with old and novel words they encounter.
 
 %Feature 1: Motivation %compute_motivation
-To estimate users' motivation we grouped their exercises into ``bursts.'' Bursts were separated by at least 24 hours \hl{todd says: did you change my code because bursts were separate by 1 hour in my imementation}.  We used three concrete features about these bursts, namely the mean and median number of exercises within bursts as well as the total number of bursts of a given user. Users that were more motivated had potentially bursts with more exercises. Simultaneously, a larger total number of bursts indicated that the burst length estimate was more trustworthy.
+To estimate users' motivation we grouped their exercises into ``bursts.'' Bursts
+were separated by at least 24 hours \hl{todd says: did you change my code
+  because bursts were separate by 1 hour in my imementation}.  We used three
+concrete features about these bursts, namely the mean and median number of
+exercises within bursts as well as the total number of bursts of a given user.
+We hypothesized that more motivated users may have bursts with more exercises.
+Simultaneously, a larger total number of bursts indicated that the burst length
+estimate was more trustworthy.
 
 %Feature 2: Consistency %compute_usage_entropy
 
@@ -196,14 +206,15 @@ the particular instance word. These features were encoded separately for the
 instance token and for the instance root word created by lemmatization.
 For each token (and root) we tracked user performance through four weighted
 error averages. At the user's first encounter of the token, each error term $E$ starts at
-zero. After an encounter with an instance of the token with label $L$, it is
+zero. After an encounter with an instance of the token with label $L$ (0 for
+success, 1 for error), it is
 updated according to the equation
 
 \[
 E \leftarrow E + \alpha (L - E)
 \]
 
-where $\alpha$ determines the speed of error updating. The four feature weighted
+where $\alpha$ determines the speed of error updating. The four weighted
 error terms use $\alpha = \{.3, .1, .03, .01\}$, allowing both short-run and
 long-run changes in a user's error rate with a token to be tracked. Note that in
 cases where a token appears multiple times in an exercise, a single update of
@@ -264,7 +275,7 @@ tree splits would be needed to capture its relation to the target. Fortunately,
 LightGBM implements an algorithm for partitioning the values of a categorical
 feature into two groups based on their relevence to the current loss, and create
 a single split to divide those groups \cite{fisher1958grouping}. Thus, as
-alluded to above, high-cardinality features like token and user were encoded as
+alluded to above, high-cardinality features like token and user ID were encoded as
 single columns and handled as categories by LightGBM.
 
 We trained a model for each of the three language tracks of {\tt en\_es}, {\tt es\_en},
@@ -274,9 +285,9 @@ training, we averaged the predictions of each single-language model with that of
 the all-language model to form our final predictions.
 
 To tune model hyper-parameters and evaluate the usefulness of features, we first
-trained the models on the ``train'' data set and evaluated them on the ``dev''
+trained the models on the {\tt train} data set and evaluated them on the {\tt dev}
 data set. Once the model structure was finalized, we trained on the combined
-``train'' and ``dev'' data and produced predictions for the ``test'' data. The
+{\tt train} and {\tt dev} data and produced predictions for the {\tt test} data. The
 LightGBM hyperparameters used for each model are listed in Table~\ref{lightgbm-params}.
 
 
@@ -287,8 +298,8 @@ The AUROC of our final predictions was $.8585$ on {\tt en\_es}, $.8350$ on {\tt
   es\_en}, and $.8540$ on {\tt fr\_en}. We did not attempt to optimize the model's
 F1 score, but the F1 score could likely be improved (at the cost of
 increased log loss) by finding the
-rescaling of the ``dev'' predicted probabilities that maximized the F1 score at
-the 0.5 threshold, and applying this rescaling to the ``test'' predicted probabilities.
+rescaling of the {\tt dev} predicted probabilities that maximized the F1 score at
+the 0.5 threshold, and applying this rescaling to the {\tt test} predicted probabilities.
 
 \section{Feature Removal Experiments}
 
@@ -340,7 +351,7 @@ such as morphological features and part of speech, created only a small
 degradation of performance. In the case of users, removing features such as
 entropy and average exercise burst length led to a tiny increase of performance.
 In the case of both users and words, though, we find that in the absence of ID
-features the other features are helpful and leads to better performance than
+features the other features are helpful and lead to better performance than
 removing all features. We also found that removing all information about
 neighboring words and the dependency-parse root word degraded performance. This
 confirms that word context matters, and suggests that users commonly make errors in word order,
@@ -348,15 +359,15 @@ subject--verb matching and other grammatical rules.
 
 Our external word features---Levenshtein distance to translation, frequency, and
 age of acquisition---provided a slight boost to model performance, showing the
-benefit of considering from a psychological and linguistic perspective what
-makes a word hard to learn. Adding temporal features about past encounters and
+benefit of considering what makes a word hard to learn from a psychological and
+linguistic perspective. Adding temporal features about past encounters and
 errors helped the models, but not as much as we expected. While not included in
 the final model, we had also tried augmenting the temporal feature set with more
 features related to massing and spacing of encounters with a word, but found it
 did not improve performance. This is perhaps not surprising given how small the
 benefit of the existing temporal features are in our model.
 
-While not plotted above, we also ran a model lesioning exercise-level features
+Though not plotted above, we also ran a model lesioning exercise-level features
 including client, session type, format, and exercise duration. This model
 achieved an AUROC of $.787$, far lower than any other lesion. This points to the
 importance of how a question is asked for user performance, reflecting insights
@@ -366,10 +377,10 @@ from psychology such as the difference between recall and recognition memory
 \section{Discussion}
 
 When approaching the Duolingo SLAM task, we hoped to leverage psychological
-insights in building our model. We found that in some cases, such as the
-age of acquisition, this was helpful. In general, though, our model gained its
+insights in building our model. We found that in some cases, such as using the
+word's age of acquisition, this was helpful. In general, though, our model gained its
 power not from hand-crafted features but from applying a powerful inference
-technique (gradient boosted trees) to raw input about user and word IDs and
+technique (gradient boosted decision trees) to raw input about user and word IDs and
 exercise features.
 
 There are multiple reasons for the limited applicability of psychology to this
@@ -377,7 +388,7 @@ competition. First, computational psychological models, while useful, are not
 well-suited to generating highly accurate predictions from large data sets.
 Because they are designed not for prediction but for explanation, they tend to
 use a small number of input variables and allow those variables to interact
-in limited ways. In contrast, gradient boosted trees, as well as other
+in limited ways. In contrast, gradient boosted decision trees, as well as other
 cutting-edge techniques like deep learning can extract high-level
 interactions among hundreds of features. Though they are highly opaque, require
 a lot of data, and are not amenable to explanation, these models excel at prediction.
@@ -405,12 +416,15 @@ first-language translation would still likely prove to be features which
 have high predictive utility.
 
 In sum, we believe that the Duolingo SLAM dataset and challenge provide
-interesting opportunities for cognitive science and psychology.  One particularly
-useful paradigm is to use large-scale, predictive challenges like this one
-to identify the features or variables that are possibly important for learning.
-Then, complementary laboratory scale studies can be conducted which
+interesting opportunities for cognitive science and psychology. 
+Large-scale, predictive challenges like this one
+might be used to identify features or variables that are important for learning.
+Then, complementary laboratory-scale studies can be conducted which
 establish the causal status of such features through controlled experimentation.
-\hl{Or something more positive to end on?}
+Conversely, insights from controlled experiments can be used to generate
+new features that aid predictive models on naturalistic datasets. This type of
+two-way interaction could lead to long-run improvements in both causal
+explanation and real-world prediction.
 
 \section{Acknowledgments}
 This research was supported by NSF grant DRL-1631436 and BCS-1255538,
