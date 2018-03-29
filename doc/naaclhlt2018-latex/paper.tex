@@ -67,8 +67,7 @@ from each other.
 Educational software that aims to teach people new skills, languages, and
 academic subjects have become increasingly popular.  The wide-spread
 deployment of these tools has created interesting opportunities to study
-the process of language acquisition in extremely large samples of learners in naturalistic
-situations. The Duolingo shared task on Second Lanugage Acquisition Modeling (SLAM)
+the process of learning in large samples. The Duolingo shared task on Second Lanugage Acquisition Modeling (SLAM)
 was a competitive modeling challenge run in early 2018~\cite{slam18}.
 The challenge, organized by Duolingo\footnote{http://duolingo.com}, a popular second
 language learning app, was
@@ -103,8 +102,8 @@ In the field of education data mining, researchers trying to build
 predictive models of student learning have typically relied on traditional, and interpretable, models and approaches
 that are rooted in cognitive science~\cite[e.g.,][]{Atkinson:1972rm,Atkinson:1972rz,Corbett1995bkt,Pavlik:2008rm}.
 However, a recent paper found that state-of-the-art results could be achieved using deep neural networks with
-little or no cognitive theory built in~\cite[so called ``deep knowledge tracing",][]{Piech:2015aa} 
-In response, a number of papers such as Khajah, Lindsey, \& Mozer (2016) compared deep knowledge tracing (DKT) to more
+little or no cognitive theory built in~\cite[so called ``deep knowledge tracing",][]{Piech:2015aa}.
+Khajah, Lindsey, \& Mozer (2016) compared deep knowledge tracing (DKT) to more
 standard ``Bayesian knowledge tracing" (BKT) models and showed
 that it was possible to equate the performance of the the BKT model by additional 
 features and parameters that represent core aspects of the psychology of learning
@@ -113,13 +112,13 @@ whether using flexible models with lots of data can improve over more heavily st
 
 For our approach to the SLAM competition, we decided to use a generic and fairly flexible model structure that we provided with hand-coded, psychologically inspired features.
 We therefore positioned our entry to SLAM somewhat in between the approaches mentioned above.
-Specifically, we used gradient boosting decision trees~\cite[GBDT][]{ke2017lightgbm} for the model structure, which is a powerful classification algorithm that is known to perform well across various kinds of data sets.  Like
+Specifically, we used gradient boosting decision trees~\cite[GBDT,][]{ke2017lightgbm} for the model structure, which is a powerful classification algorithm that is known to perform well across various kinds of data sets.  Like
 deep learning, GBDT can extract complex interactions among features,
 but it has some advantages including faster training and easier integration of
 diverse inputs. 
 
 We then created a number of new psychologically-grounded features for the SLAM
-dataset covering aspect such as user perseverance, learning processes, 
+dataset covering aspects such as user perseverance, learning processes, 
 contextual factors, and cognate similarity.  After finding a model that provided the best
 held-out performance on the test data set, we conducted a number of ``lesioning" studies where
 we selectively removed features from the model and re-estimated the parameters in order
@@ -198,7 +197,7 @@ features related to past experience.
 First, we encoded the number of times the
 current exercise's exact sentence had been seen before by the user. This is
 informed by psychological research showing memory and perceptual processing
-improvement for repeated contexts or chunks~\cite[e.g.,][]{Chun:1999gt}. 
+improvements for repeated contexts or ``chunks"~\cite[e.g.,][]{Chun:1999gt}. 
 
 We also encoded a set of features recording past experience with
 the particular instance word. These features were encoded separately for the
@@ -285,7 +284,9 @@ the all-language model to form our final predictions.
 
 To tune model hyper-parameters and evaluate the usefulness of features, we first
 trained the models on the {\tt train} data set and evaluated them on the {\tt dev}
-data set. \hl{Anselm: if space permits, mention what the train, dev, and test data sets look like? e.g.:  80\% of each user's exercises are in train, 10\% in each of dev and test.} Once the model structure was finalized, we trained on the combined
+data set. Details of the training sets and the actual files are provided on the
+Harvard Dataverse\footnote{https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/8SWHNO}.
+Once the model structure was finalized, we trained on the combined
 {\tt train} and {\tt dev} data and produced predictions for the {\tt test} data. The
 LightGBM hyperparameters used for each model are listed in Table~\ref{lightgbm-params}.
 
@@ -293,9 +294,14 @@ LightGBM hyperparameters used for each model are listed in Table~\ref{lightgbm-p
 
 \subsection{Performance}
 
-\hl{Anselm: mention AUROC of baseline model for comparison? shall the reader be impressed by our performance. perhaps also mention the winner's score (the deep learning team) for commparison, to show that our score was not that much worse? `we were 0.01 behind the deep learning model' sounds cooler to me than `we were third'}
 The AUROC of our final predictions was $.8585$ on {\tt en\_es}, $.8350$ on {\tt
-  es\_en}, and $.8540$ on {\tt fr\_en}. We did not attempt to optimize the model's
+  es\_en}, and $.8540$ on {\tt fr\_en}. For reference this placed us within .01 of the winning
+  entry for each problem ($.8613$ on {\tt en\_es}, $.8383$ on {\tt
+  es\_en}, and $.8570$ on {\tt fr\_en}).  Also note that the Duolingo-provided baseline
+  model (L2-regularized regression trained with stochastic gradient descent weighted
+  by frequency) obtains $.7737$ on {\tt en\_es}, $.7456$ on {\tt
+  es\_en}, and $.7707$ on {\tt fr\_en}.
+  We did not attempt to optimize the model's
 F1 score, but the F1 score could likely be improved (at the cost of
 increased log loss) by finding the
 rescaling of the {\tt dev} predicted probabilities that maximized the F1 score at
@@ -369,10 +375,9 @@ benefit of the existing temporal features are in our model.
 Though not plotted above, we also ran a model lesioning exercise-level features
 including client, session type, format, and exercise duration. This model
 achieved an AUROC of $.787$, far lower than any other lesion. This points to the
-importance of how a question is asked for user performance, reflecting insights
+importance of how memory is assess on performance, reflecting insights
 from psychology such as the difference between recall and recognition memory
 \cite{yonelinas2002nature}. 
-\hl{Anselm: I don't understand the last sentence here.}
 
 \section{Discussion}
 
@@ -417,7 +422,6 @@ a completely new language such as German, many parts of our model would falter
 but word frequency, age of acquisition, and Levenshtein distance to
 first-language translation would still likely prove to be features which
 have high predictive utility.
-\hl{I like that sentence! Bam take that, deep learning}
 
 In sum, we believe that the Duolingo SLAM dataset and challenge provide
 interesting opportunities for cognitive science and psychology. 
@@ -426,7 +430,7 @@ might be used to identify features or variables that are important for learning.
 Then, complementary laboratory-scale studies can be conducted which
 establish the causal status of such features through controlled experimentation.
 Conversely, insights from controlled experiments can be used to generate
-new features that aid predictive models on naturalistic datasets. This type of
+new features that aid predictive models on naturalistic datasets~\cite{Griffiths:2015aa,Goldstone:2016aa}. This type of
 two-way interaction could lead to long-run improvements in both scientific
 explanation and real-world prediction.
 
