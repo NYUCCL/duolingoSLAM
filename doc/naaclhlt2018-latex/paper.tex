@@ -105,7 +105,7 @@ However, a recent paper found that state-of-the-art results could be achieved us
 little or no cognitive theory built in~\cite[so called ``deep knowledge tracing",][]{Piech:2015aa}.
 Khajah, Lindsey, \& Mozer (2016) compared deep knowledge tracing (DKT) to more
 standard ``Bayesian knowledge tracing" (BKT) models and showed
-that it was possible to equate the performance of the the BKT model by additional 
+that it was possible to equate the performance of the BKT model by additional 
 features and parameters that represent core aspects of the psychology of learning
 and memory such as forgetting and individual abilities~\cite{Khajah2016hdnt}. An ongoing debate remains in this community 
 whether using flexible models with lots of data can improve over more heavily structured, theory-based models \cite{Tang:2016:DNN, xiong2016going, zhang2017incorporating}.
@@ -284,7 +284,7 @@ the all-language model to form our final predictions.
 
 To tune model hyper-parameters and evaluate the usefulness of features, we first
 trained the models on the {\tt train} data set and evaluated them on the {\tt dev}
-data set. Details of the training sets and the actual files are provided on the
+data set. Details of the datasets and the actual files are provided on the
 Harvard Dataverse\footnote{https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/8SWHNO}.
 Once the model structure was finalized, we trained on the combined
 {\tt train} and {\tt dev} data and produced predictions for the {\tt test} data. The
@@ -375,9 +375,8 @@ benefit of the existing temporal features are in our model.
 Though not plotted above, we also ran a model lesioning exercise-level features
 including client, session type, format, and exercise duration. This model
 achieved an AUROC of $.787$, far lower than any other lesion. This points to the
-importance of how memory is assess on performance, reflecting insights
-from psychology such as the difference between recall and recognition memory
-\cite{yonelinas2002nature}. 
+fact that \emph{how} memory is assessed often includes observed performance 
+\cite[e.g., the large literature in psychology on the difference between recall and recognition memory,][]{yonelinas2002nature}. 
 
 \section{Discussion}
 
