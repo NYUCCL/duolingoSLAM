@@ -30,7 +30,7 @@
 % smaller than 5cm (the original size); we will check this
 % in the camera-ready version and ask you to change it back.
 
-\hypersetup{draft}
+% \hypersetup{draft}
 \newcommand\BibTeX{B{\sc ib}\TeX}
 
 \title{Modeling Second-Language Learning from a Psychological Perspective}
@@ -76,7 +76,7 @@ predict patterns of future translation mistakes in held-out data.  The data was
 divided into three sets covering Spanish speakers learning English ({\tt en\_es}),
 English speakers learning Spanish ({\tt es\_en}), and English speakers learning
 French ({\tt fr\_en}).
-This paper reports the approach used by our team which ended in third place 
+This paper reports the approach used by our team, which finished in third place 
 for the {\tt en\_es} data set, second place for {\tt es\_en}, and third place
 for {\tt fr\_en}.
 
@@ -225,15 +225,20 @@ token.
 In the training data, all instances are labeled as correct or incorrect, so the
 label for the previous encounter is always available. In the test data, labels
 are unavailable, so predictions must be made using a mix of labeled and
-unlabeled past encounters. To generate training-set features that are 
+unlabeled past encounters. In particular, for a user's test set with $n$
+exercises, each exercise will have between zero and $n-1$ preceding unlabeled exercises.
+
+To generate training-set features that are 
 comparable to test-set features, we selectively ignored some labels when encoding temporal features on
 the training set. Specifically, for each user we first calculated the number of
-exercises $n$ in the true test set. Then, when encoding the features for each
-instance, we selected a random integer $r$ in the range $[1,n]$, and ignored labels
-in the prior $r$ exercises. That is, we encode features for the current instance
-as though other instances in those prior exercises were unlabeled, and ignore
+exercises $n$ in their true test set\footnote{If the size of the test set were
+  not available, it could be estimated based on the fact that it is
+  approximately 5\% of each participant's data.}. Then, when encoding the features for each
+training instance, we selected a random integer $r$ in the range $[0,n-1]$, and
+ignored the labels in the prior $r$ exercises. That is, we encoded features for the instance
+as though other instances in those prior exercises were unlabeled, and ignored
 updates to the error averages from those exercises. The result of this process
-is that each instance in the training set is encoded as though it were between
+is that each instance in the training set was encoded as though it were between
 one and $n$ exercises into the test set.
 
 \subsection{Modeling}
@@ -244,13 +249,13 @@ one and $n$ exercises into the test set.
 \begin{tabular}{|l|llll|}
   % \hline   & \multicolumn{3}{l}{\bf Value} & \\
   \hline \bf Parameter & {\tt fr\_en} & {\tt en\_es} & {\tt es\_en} & {\tt all} \\ \hline
-  num\_leaves & 256 & 512 & 512 & 1024 \\
-  learning\_rate & .05 & .05 & .05 & .05 \\
-  min\_data\_in\_leaf & 100 & 100 & 100 & 100 \\
-  num\_boost\_rounds & 750 & 650 & 600 & 750 \\
-  cat\_smooth & 200 & 200 & 200& 200 \\
-  feature\_fraction & .7 & .7 & .7 & .7 \\
-  max\_cat\_threshold & 32 & 32 & 32& 64 \\
+  {\tt num\_leaves} & 256 & 512 & 512 & 1024 \\
+  {\tt learning\_rate} & .05 & .05 & .05 & .05 \\
+  {\tt min\_data\_in\_leaf} & 100 & 100 & 100 & 100 \\
+  {\tt num\_boost\_rounds} & 750 & 650 & 600 & 750 \\
+  {\tt cat\_smooth} & 200 & 200 & 200& 200 \\
+  {\tt feature\_fraction} & .7 & .7 & .7 & .7 \\
+  {\tt max\_cat\_threshold} & 32 & 32 & 32& 64 \\
 \hline
 \end{tabular}
 \end{center}
@@ -280,7 +285,9 @@ We trained a model for each of the three language tracks of {\tt en\_es}, {\tt e
 and {\tt fr\_en}, and also trained a model on the combined data from
 all three tracks, adding an additional ``language'' feature. Following model
 training, we averaged the predictions of each single-language model with that of
-the all-language model to form our final predictions.
+the all-language model to form our final predictions. Informal experimentation
+showed that model averaging provided a modest performance boost, and that
+weighted averages did not clearly outperform a simple average.
 
 To tune model hyper-parameters and evaluate the usefulness of features, we first
 trained the models on the {\tt train} data set and evaluated them on the {\tt dev}
@@ -301,11 +308,12 @@ The AUROC of our final predictions was $.8585$ on {\tt en\_es}, $.8350$ on {\tt
   model (L2-regularized regression trained with stochastic gradient descent weighted
   by frequency) obtains $.7737$ on {\tt en\_es}, $.7456$ on {\tt
   es\_en}, and $.7707$ on {\tt fr\_en}.
-  We did not attempt to optimize the model's
-F1 score, but the F1 score could likely be improved (at the cost of
-increased log loss) by finding the
-rescaling of the {\tt dev} predicted probabilities that maximized the F1 score at
-the 0.5 threshold, and applying this rescaling to the {\tt test} predicted probabilities.
+We did not attempt to optimize F1 score, the competition's secondary evaluation metric.
+%   We did not attempt to optimize the model's
+% F1 score., but the F1 score could likely be improved (at the cost of
+% increased log loss) by finding the
+% rescaling of the {\tt dev} predicted probabilities that maximized the F1 score at
+% the 0.5 threshold, and applying this rescaling to the {\tt test} predicted probabilities.
 
 \section{Feature Removal Experiments}
 
@@ -329,12 +337,12 @@ The results of the lesion experiments are shown in Figure~\ref{fig:lesions}. The
 models are as follows.
 \begin{description}
   \item[none:] All features are included.  
-  \item[user:] All user-level features, including the user ID and other
+  \item[user all:] All user-level features, including the user ID and other
     calculated features like entropy and measures of exercise bursts, are
     removed.
-  \item[userid \& user other:] Only user ID or only the calculated
-    features user features, respectively, are removed.
-  \item[word:] Token and token root IDs; previous, next, and dependency-tree
+  \item[user id \& user other:] Only user ID or only the calculated
+    user features, respectively, are removed.
+  \item[word all:] Token and token root IDs; previous, next, and dependency-tree
     root word IDs; and morphological, part of speech, and dependency tree
     features are removed. This does not include {\bf external} features listed below.
   \item[word id \& word other:] Only word IDs or only other
@@ -375,7 +383,7 @@ benefit of the existing temporal features are in our model.
 Though not plotted above, we also ran a model lesioning exercise-level features
 including client, session type, format, and exercise duration. This model
 achieved an AUROC of $.787$, far lower than any other lesion. This points to the
-fact that \emph{how} memory is assessed often includes observed performance 
+fact that the manner in which memory is assessed often affects observed performance 
 \cite[e.g., the large literature in psychology on the difference between recall and recognition memory,][]{yonelinas2002nature}. 
 
 \section{Discussion}
