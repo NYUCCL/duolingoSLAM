@@ -2,7 +2,7 @@
 
 This repository contains code for running the 2nd place (Spanish-to-English) and
 3rd place (English-to-Spanish and French-to-English) model in the 
-[Duolingo SLAM competition](https://competitions.codalab.org/competitions/18491). 
+[Duolingo SLAM competition](http://sharedtask.duolingo.com/). 
 The paper describing our approach can be found [here](https://psyarxiv.com/r93wc/).
 
 ## Acquiring the data
